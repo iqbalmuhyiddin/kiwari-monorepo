@@ -1,0 +1,38 @@
+# ── Go ────────────────────────────
+api/tmp/
+api/*.exe
+
+# ── Node / SvelteKit ─────────────
+admin/node_modules/
+admin/.svelte-kit/
+admin/build/
+admin/.env
+admin/.env.*
+!admin/.env.example
+
+# ── Android ───────────────────────
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/*.apk
+android/captures/
+android/.externalNativeBuild/
+android/.cxx/
+
+# ── Docker ────────────────────────
+docker/.env
+docker/data/
+
+# ── IDE ───────────────────────────
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# ── Secrets ───────────────────────
+*.pem
+*.key
+.env
+!.env.example
+!docker/.env.example

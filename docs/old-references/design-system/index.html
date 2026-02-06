@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiwari POS - Final Design System</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        :root {
+            /* Brand Colors */
+            --primary-green: #0c7721;
+            --primary-yellow: #ffd500;
+            --accent-red: #d43b0a;
+            --border-yellow: #ffea60; /* New adjustment */
+            
+            /* Neutrals */
+            --bg-cream: #fffcf2;
+            --bg-cream-dark: #fff8e7;
+            --text-dark: #262626;
+            --text-grey: #3a3838;
+            --text-light: #fffcf2;
+            --border-color: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            color: var(--text-dark);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            margin-bottom: 60px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 42px;
+            color: var(--primary-green);
+            margin-bottom: 10px;
+            font-weight: 800;
+        }
+
+        section {
+            margin-bottom: 60px;
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        }
+
+        h2 {
+            font-size: 24px;
+            margin-bottom: 30px;
+            border-bottom: 3px solid var(--primary-yellow);
+            display: inline-block;
+            padding-bottom: 5px;
+        }
+
+        /* Colors Grid */
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 20px;
+        }
+
+        .color-card {
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+        .color-card:hover { transform: translateY(-5px); }
+
+        .color-swatch {
+            height: 100px;
+            width: 100%;
+        }
+
+        .color-info {
+            padding: 15px;
+            background: white;
+        }
+
+        .color-name {
+            font-weight: 700;
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .color-hex {
+            font-size: 12px;
+            color: #666;
+            font-family: monospace;
+        }
+
+        /* Mockups */
+        .mockups-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 60px;
+            justify-content: center;
+        }
+
+        .mobile-frame {
+            border: 12px solid #262626;
+            border-radius: 40px;
+            overflow: hidden;
+            height: 844px; /* iPhone 12/13/14 height */
+            width: 390px;  /* iPhone 12/13/14 width */
+            position: relative;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.15);
+            background: white;
+            margin: 0 auto; /* Center the frame */
+        }
+
+        .status-bar {
+            height: 40px;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* --- THEME 1: VIBRANT LIGHT (Final) --- */
+        .theme-vibrant-light {
+            height: 100%;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .theme-vibrant-light .header-bg {
+            background-color: var(--primary-yellow);
+            padding: 60px 24px 30px;
+            border-bottom-left-radius: 32px;
+            border-bottom-right-radius: 32px;
+            margin-bottom: 10px;
+        }
+
+        .theme-vibrant-light h2 {
+            border: none;
+            margin: 0;
+            font-size: 28px;
+            color: var(--text-dark);
+            font-weight: 800;
+        }
+
+        .theme-vibrant-light .subtitle {
+            margin: 5px 0 0;
+            font-size: 14px;
+            color: var(--text-dark);
+            opacity: 0.8;
+        }
+
+        .theme-vibrant-light .content {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .theme-vibrant-light .card {
+            background: white;
+            border: 1px solid #e0e0e0; /* Neutral default border */
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03); /* Subtle shadow */
+            transition: all 0.2s ease;
+        }
+
+        /* Active State Simulation */
+        .theme-vibrant-light .card.active {
+            border: 2px solid var(--border-yellow);
+            background-color: #fffdf5;
+            transform: scale(0.98);
+        }
+
+        .theme-vibrant-light .item-img {
+            width: 70px;
+            height: 70px;
+            background-color: #eee;
+            border-radius: 12px;
+        }
+
+        .theme-vibrant-light .item-info { flex: 1; }
+        .theme-vibrant-light .item-title { 
+            font-weight: 600; 
+            margin: 0 0 4px; 
+            font-size: 16px; 
+            color: var(--text-dark);
+        }
+        .theme-vibrant-light .item-price { 
+            font-size: 14px; 
+            color: #666;
+            font-weight: 500;
+        }
+
+        .theme-vibrant-light .add-btn {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary-green);
+            color: white;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(12, 119, 33, 0.2);
+        }
+
+        .theme-vibrant-light .checkout-bar {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #eee;
+        }
+
+        .theme-vibrant-light .checkout-btn {
+            width: 100%;
+            background: var(--text-dark);
+            color: var(--primary-yellow);
+            padding: 18px;
+            border: none;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        /* --- THEME 2: VIBRANT DARK (Final) --- */
+        .theme-vibrant-dark {
+            height: 100%;
+            background-color: var(--text-dark); /* #262626 */
+            display: flex;
+            flex-direction: column;
+            color: white;
+        }
+
+        .theme-vibrant-dark .header-bg {
+            background-color: #333; /* Slightly lighter header for contrast */
+            padding: 60px 24px 30px;
+            border-bottom-left-radius: 32px;
+            border-bottom-right-radius: 32px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid var(--primary-yellow); /* Accent line */
+        }
+
+        .theme-vibrant-dark h2 {
+            border: none;
+            margin: 0;
+            font-size: 28px;
+            color: var(--primary-yellow); /* Yellow text for brand pop */
+            font-weight: 800;
+        }
+
+        .theme-vibrant-dark .subtitle {
+            margin: 5px 0 0;
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        .theme-vibrant-dark .content {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .theme-vibrant-dark .card {
+            background: #404040; /* Lighter surface for better separation */
+            border: 1px solid #555;
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .theme-vibrant-dark .item-img {
+            width: 70px;
+            height: 70px;
+            background-color: #555;
+            border-radius: 12px;
+        }
+
+        .theme-vibrant-dark .item-info { flex: 1; }
+        .theme-vibrant-dark .item-title { 
+            font-weight: 700; 
+            margin: 0 0 4px; 
+            font-size: 16px; 
+            color: white;
+        }
+        .theme-vibrant-dark .item-price { 
+            font-size: 14px; 
+            color: var(--primary-yellow);
+            font-weight: 700; /* Bolder price */
+            font-family: monospace; /* Monospace for alignment */
+        }
+
+        .theme-vibrant-dark .add-btn {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary-yellow); /* Yellow button for high contrast */
+            color: var(--text-dark);
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .theme-vibrant-dark .checkout-bar {
+            padding: 20px;
+            background: var(--text-dark);
+            border-top: 1px solid #333;
+        }
+
+        .theme-vibrant-dark .checkout-btn {
+            width: 100%;
+            background: var(--primary-green);
+            color: white;
+            padding: 18px;
+            border: none;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+
+        /* --- THEME 3: REFINED LIGHT (Feedback) --- */
+        .theme-refined-light {
+            height: 100%;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            color: var(--text-dark);
+        }
+
+        .theme-refined-light .header-bg {
+            background-color: white;
+            padding: 60px 24px 20px;
+            border-bottom: 2px solid var(--primary-yellow);
+        }
+
+        .theme-refined-light h2 {
+            margin: 0;
+            font-size: 28px;
+            color: var(--text-dark);
+            font-weight: 800;
+        }
+
+        .theme-refined-light .subtitle {
+            margin: 5px 0 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .theme-refined-light .content {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .theme-refined-light .card {
+            background: white;
+            border: 1px solid #e0e0e0; /* Neutral default border */
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03); /* Subtle shadow */
+            transition: all 0.2s ease;
+        }
+
+        /* Active State Simulation */
+        .theme-refined-light .card.active {
+            border: 2px solid var(--border-yellow);
+            background-color: #fffdf5;
+            transform: scale(0.98);
+        }
+
+        .theme-refined-light .item-img {
+            width: 70px;
+            height: 70px;
+            background-color: #eee;
+            border-radius: 12px;
+        }
+
+        .theme-refined-light .item-info { flex: 1; }
+        .theme-refined-light .item-title { 
+            font-weight: 600; 
+            margin: 0 0 4px; 
+            font-size: 16px; 
+        }
+        .theme-refined-light .item-price { 
+            font-size: 14px; 
+            color: #666;
+            font-weight: 500;
+        }
+
+        .theme-refined-light .add-btn {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary-green);
+            color: white;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(12, 119, 33, 0.2);
+        }
+
+        .theme-refined-light .checkout-bar {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #eee;
+        }
+
+        .theme-refined-light .checkout-btn {
+            width: 100%;
+            background: var(--text-dark);
+            color: var(--primary-yellow);
+            padding: 18px;
+            border: none;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        /* --- THEME 4: REFINED DARK (Feedback) --- */
+        .theme-refined-dark {
+            height: 100%;
+            background-color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+            color: white;
+        }
+
+        .theme-refined-dark .header-bg {
+            background-color: #333;
+            padding: 60px 24px 30px;
+            border-bottom-left-radius: 32px;
+            border-bottom-right-radius: 32px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid var(--primary-yellow);
+        }
+
+        .theme-refined-dark h2 {
+            border: none;
+            margin: 0;
+            font-size: 28px;
+            color: var(--primary-yellow);
+            font-weight: 800;
+        }
+
+        .theme-refined-dark .subtitle {
+            margin: 5px 0 0;
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        .theme-refined-dark .content {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .theme-refined-dark .card {
+            background: #404040; /* Lighter surface for better separation */
+            border: 1px solid #555;
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .theme-refined-dark .item-img {
+            width: 70px;
+            height: 70px;
+            background-color: #555;
+            border-radius: 12px;
+        }
+
+        .theme-refined-dark .item-info { flex: 1; }
+        .theme-refined-dark .item-title { 
+            font-weight: 700; 
+            margin: 0 0 4px; 
+            font-size: 16px; 
+            color: white;
+        }
+        .theme-refined-dark .item-price { 
+            font-size: 14px; 
+            color: var(--primary-yellow);
+            font-weight: 700; /* Bolder price */
+            font-family: monospace; /* Monospace for alignment */
+        }
+
+        .theme-refined-dark .add-btn {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary-yellow);
+            color: var(--text-dark);
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .theme-refined-dark .checkout-bar {
+            padding: 20px;
+            background: var(--text-dark);
+            border-top: 1px solid #333;
+        }
+
+        .theme-refined-dark .checkout-btn {
+            width: 100%;
+            background: var(--primary-green);
+            color: white;
+            padding: 18px;
+            border: none;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Kiwari POS</h1>
+        <p style="font-size: 18px; color: #666;">Final Design System</p>
+    </header>
+
+    <!-- Color Palette -->
+    <section>
+        <h2>Brand Colors</h2>
+        <div class="color-grid">
+            <div class="color-card">
+                <div class="color-swatch" style="background: #0c7721;"></div>
+                <div class="color-info">
+                    <span class="color-name">Primary Green</span>
+                    <span class="color-hex">#0c7721</span>
+                </div>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background: #ffd500;"></div>
+                <div class="color-info">
+                    <span class="color-name">Primary Yellow</span>
+                    <span class="color-hex">#ffd500</span>
+                </div>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background: #ffea60;"></div>
+                <div class="color-info">
+                    <span class="color-name">Border Yellow</span>
+                    <span class="color-hex">#ffea60</span>
+                </div>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background: #d43b0a;"></div>
+                <div class="color-info">
+                    <span class="color-name">Accent Red</span>
+                    <span class="color-hex">#d43b0a</span>
+                </div>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background: #262626;"></div>
+                <div class="color-info">
+                    <span class="color-name">Dark Grey</span>
+                    <span class="color-hex">#262626</span>
+                </div>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background: #3a3838;"></div>
+                <div class="color-info">
+                    <span class="color-name">Surface Grey</span>
+                    <span class="color-hex">#3a3838</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- UI Themes -->
+    <section>
+        <h2 style="text-align: center; border: none; display: block; margin-bottom: 50px;">Mobile Application Themes</h2>
+        
+        <div class="mockups-container">
+            
+            <!-- Theme 1: Vibrant Light -->
+            <div>
+                <h3 style="text-align: center; margin-bottom: 20px; font-size: 20px;">Light Mode (Vibrant)</h3>
+                <div class="mobile-frame">
+                    <div class="theme-vibrant-light">
+                        <div class="status-bar" style="color: #000;">
+                            <span>9:41</span>
+                            <span>100%</span>
+                        </div>
+                        
+                        <div class="header-bg">
+                            <h2>Kiwari POS</h2>
+                            <p class="subtitle">Welcome back, Cashier!</p>
+                        </div>
+
+                        <div class="content">
+                            <div style="display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px;">
+                                <span style="background: var(--text-dark); color: var(--primary-yellow); padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600;">All Menu</span>
+                                <span style="background: white; border: 1px solid #ddd; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600;">Foods</span>
+                                <span style="background: white; border: 1px solid #ddd; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600;">Drinks</span>
+                            </div>
+
+                            <div class="card">
+                                <div class="item-img"></div>
+                                <div class="item-info">
+                                    <p class="item-title">Nasi Bakar Ayam</p>
+                                    <p class="item-price">Rp 25.000</p>
+                                </div>
+                                <button class="add-btn">+</button>
+                            </div>
+
+                            <div class="card">
+                                <div class="item-img"></div>
+                                <div class="item-info">
+                                    <p class="item-title">Es Jeruk Segar</p>
+                                    <p class="item-price">Rp 10.000</p>
+                                </div>
+                                <button class="add-btn">+</button>
+                            </div>
+
+                            <div class="card">
+                                <div class="item-img"></div>
+                                <div class="item-info">
+                                    <p class="item-title">Sate Usus</p>
+                                    <p class="item-price">Rp 3.000</p>
+                                </div>
+                                <button class="add-btn">+</button>
+                            </div>
+                        </div>
+
+                        <div class="checkout-bar">
+                            <button class="checkout-btn">Checkout (3 Items)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Theme 2: Vibrant Dark -->
+            <div>
+                <h3 style="text-align: center; margin-bottom: 20px; font-size: 20px;">Dark Mode (Vibrant)</h3>
+                <div class="mobile-frame">
+                    <div class="theme-vibrant-dark">
+                        <div class="status-bar" style="color: #fff;">
+                            <span>9:41</span>
+                            <span>100%</span>
+                        </div>
+
+                        <div class="header-bg">
+                            <h2>Kiwari POS</h2>
+                            <p class="subtitle">Welcome back, Cashier!</p>
+                        </div>
+
+                        <div class="content">
+                            <div style="display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px;">
+                                <span style="background: var(--primary-yellow); color: var(--text-dark); padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600;">All Menu</span>
+                                <span style="background: transparent; border: 1px solid #555; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600;">Foods</span>
+                                <span style="background: transparent; border: 1px solid #555; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600;">Drinks</span>
+                            </div>
+
+                            <div class="card">
+                                <div class="item-img"></div>
+                                <div class="item-info">
+                                    <p class="item-title">Nasi Bakar Ayam</p>
+                                    <p class="item-price">Rp 25.000</p>
+                                </div>
+                                <button class="add-btn">+</button>
+                            </div>
+
+                            <div class="card">
+                                <div class="item-img"></div>
+                                <div class="item-info">
+                                    <p class="item-title">Es Jeruk Segar</p>
+                                    <p class="item-price">Rp 10.000</p>
+                                </div>
+                                <button class="add-btn">+</button>
+                            </div>
+
+                            <div class="card">
+                                <div class="item-img"></div>
+                                <div class="item-info">
+                                    <p class="item-title">Sate Usus</p>
+                                    <p class="item-price">Rp 3.000</p>
+                                </div>
+                                <button class="add-btn">+</button>
+                            </div>
+                        </div>
+
+                        <div class="checkout-bar">
+                            <button class="checkout-btn">Checkout (3 Items)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>           
+        </div>
+    </section>
+
+    <!-- NEW MOCKUPS SECTION -->
+    <section id="app-mockups">
+        <h2 style="text-align: center; border: none; display: block; margin-bottom: 30px;">App Screens (High Fidelity)</h2>
+        
+        <!-- Navigation for Mockups -->
+        <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 30px;">
+            <button class="nav-btn active" onclick="showScreen('login')">1. Login</button>
+            <button class="nav-btn" onclick="showScreen('home')">2. Home</button>
+            <button class="nav-btn" onclick="showScreen('order')">3. Order Taking</button>
+        </div>
+
+        <!-- Mockup Wrapper -->
+        <div class="mobile-frame" style="background: #333; padding: 0;">
+            <div class="screen-container" style="height: 100%; position: relative; background: white;">
+                
+                <!-- 1. LOGIN SCREEN -->
+                <div id="login-screen" class="screen active" style="display: flex; flex-direction: column; height: 100%; background-color: var(--primary-green); align-items: center; justify-content: center; padding: 20px;">
+                    <div class="login-card" style="background: white; width: 100%; max-width: 340px; padding: 30px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center;">
+                        <div class="login-logo" style="width: 50px; height: 50px; background: var(--primary-yellow); border-radius: 12px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; color: var(--text-dark);">K</div>
+                        <h2 style="font-size: 20px; margin: 0 0 5px; border: none; color: var(--text-dark);">Welcome Back</h2>
+                        <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Sign in to start your shift</p>
+                        
+                        <div style="text-align: left; margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px;">Email Address</label>
+                            <input type="email" value="cashier@kiwari.com" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 14px; box-sizing: border-box;">
+                        </div>
+
+                        <div style="text-align: left; margin-bottom: 25px;">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px;">Password</label>
+                            <input type="password" value="••••••••" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 14px; box-sizing: border-box;">
+                        </div>
+
+                        <button style="width: 100%; background: var(--primary-green); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer;">Login to POS</button>
+                    </div>
+                </div>
+
+                <!-- 2. HOME SCREEN -->
+                <div id="home-screen" class="screen" style="display: none; flex-direction: column; height: 100%; background-color: white;">
+                    <div style="padding: 20px; background: var(--primary-yellow); border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h1 style="font-size: 20px; margin: 0; color: var(--text-dark);">Good Morning, John!</h1>
+                            <p style="color: #404040; font-size: 12px; margin: 4px 0 0; font-weight: 500;">Cashier • Shift started at 09:00 AM</p>
+                        </div>
+                        <div style="width: 36px; height: 36px; background: rgba(255,255,255,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--text-dark);">J</div>
+                    </div>
+
+                    <div style="padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <!-- New Order -->
+                        <div onclick="showScreen('order')" style="background: white; padding: 20px; border-radius: 20px; border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; border-left: 5px solid var(--primary-green);">
+                            <div style="width: 40px; height: 40px; background: #e6f4ea; color: var(--primary-green); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </div>
+                            <div style="font-weight: 700; font-size: 16px;">New Order</div>
+                            <div style="color: #666; font-size: 12px; margin-top: 4px;">Start transaction</div>
+                        </div>
+
+                        <!-- Active Orders -->
+                        <div style="background: white; padding: 20px; border-radius: 20px; border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; border-left: 5px solid #f57f17;">
+                            <div style="width: 40px; height: 40px; background: #fff8e1; color: #f57f17; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                            </div>
+                            <div style="font-weight: 700; font-size: 16px;">Active Orders</div>
+                            <div style="color: #666; font-size: 12px; margin-top: 4px;">3 in kitchen</div>
+                        </div>
+
+                        <!-- Reports -->
+                        <div style="background: white; padding: 20px; border-radius: 20px; border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; border-left: 5px solid #1976d2;">
+                            <div style="width: 40px; height: 40px; background: #e3f2fd; color: #1976d2; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                            </div>
+                            <div style="font-weight: 700; font-size: 16px;">Sales Report</div>
+                            <div style="color: #666; font-size: 12px; margin-top: 4px;">Rp 2.5M today</div>
+                        </div>
+
+                        <!-- Customers -->
+                        <div style="background: white; padding: 20px; border-radius: 20px; border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; border-left: 5px solid #7b1fa2;">
+                            <div style="width: 40px; height: 40px; background: #f3e5f5; color: #7b1fa2; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                            </div>
+                            <div style="font-weight: 700; font-size: 16px;">Customers</div>
+                            <div style="color: #666; font-size: 12px; margin-top: 4px;">Lookup members</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. ORDER SCREEN (UPDATED FOR SMARTPHONE) -->
+                <div id="order-screen" class="screen" style="display: none; flex-direction: column; height: 100%; background-color: white;">
+                    <!-- Header -->
+                    <div style="background-color: var(--primary-yellow); height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 10;">
+                        <div style="font-weight: 800; font-size: 16px; color: var(--text-dark);">Kiwari POS</div>
+                        <button style="background: none; border: 2px solid var(--text-dark); padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;" onclick="showScreen('home')">Exit</button>
+                    </div>
+                    
+                    <!-- Menu List (Full Width) -->
+                    <div style="flex: 1; display: flex; flex-direction: column; background-color: white; overflow: hidden;">
+                        <!-- Categories -->
+                        <div style="display: flex; gap: 8px; padding: 12px; overflow-x: auto; background: white; border-bottom: 1px solid #e0e0e0; flex-shrink: 0;">
+                            <div style="padding: 6px 12px; border-radius: 16px; font-weight: 600; font-size: 12px; cursor: pointer; background: var(--primary-green); color: white; white-space: nowrap;">All Items</div>
+                            <div style="padding: 6px 12px; border-radius: 16px; font-weight: 600; font-size: 12px; cursor: pointer; background: #f0f0f0; color: #666; white-space: nowrap;">Favorites</div>
+                            <div style="padding: 6px 12px; border-radius: 16px; font-weight: 600; font-size: 12px; cursor: pointer; background: #f0f0f0; color: #666; white-space: nowrap;">Beverages</div>
+                            <div style="padding: 6px 12px; border-radius: 16px; font-weight: 600; font-size: 12px; cursor: pointer; background: #f0f0f0; color: #666; white-space: nowrap;">Food</div>
+                        </div>
+                        
+                        <!-- Grid -->
+                        <div style="padding: 12px; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-content: start; padding-bottom: 80px;">
+                            <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e0e0e0;">
+                                <div style="height: 100px; background: #eee; background-image: url('https://images.unsplash.com/photo-1603133872878-684f208fb74b?w=300'); background-size: cover;"></div>
+                                <div style="padding: 10px;">
+                                    <div style="font-weight: 700; font-size: 13px; margin-bottom: 4px;">Nasi Goreng</div>
+                                    <div style="color: var(--primary-green); font-weight: 700; font-size: 13px;">Rp 35.000</div>
+                                </div>
+                            </div>
+                            <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e0e0e0;">
+                                <div style="height: 100px; background: #eee; background-image: url('https://images.unsplash.com/photo-1544025162-d76694265947?w=300'); background-size: cover;"></div>
+                                <div style="padding: 10px;">
+                                    <div style="font-weight: 700; font-size: 13px; margin-bottom: 4px;">Beef Rendang</div>
+                                    <div style="color: var(--primary-green); font-weight: 700; font-size: 13px;">Rp 45.000</div>
+                                </div>
+                            </div>
+                            <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e0e0e0;">
+                                <div style="height: 100px; background: #eee; background-image: url('https://images.unsplash.com/photo-1576489922094-2cfe89fb1733?w=300'); background-size: cover;"></div>
+                                <div style="padding: 10px;">
+                                    <div style="font-weight: 700; font-size: 13px; margin-bottom: 4px;">Iced Tea</div>
+                                    <div style="color: var(--primary-green); font-weight: 700; font-size: 13px;">Rp 8.000</div>
+                                </div>
+                            </div>
+                            <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e0e0e0;">
+                                <div style="height: 100px; background: #eee; background-image: url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=300'); background-size: cover;"></div>
+                                <div style="padding: 10px;">
+                                    <div style="font-weight: 700; font-size: 13px; margin-bottom: 4px;">Pizza Slice</div>
+                                    <div style="color: var(--primary-green); font-weight: 700; font-size: 13px;">Rp 25.000</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cart Summary (Floating Bottom Bar) -->
+                    <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: white; border-top: 1px solid #eee; padding: 15px; box-shadow: 0 -4px 10px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div style="font-size: 12px; color: #666;">Order #002 • 3 Items</div>
+                            <div style="font-weight: 800; font-size: 16px;">Rp 51.000</div>
+                        </div>
+                        <button style="width: 100%; background: var(--primary-green); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; padding-left: 20px; padding-right: 20px;">
+                            <span>View Cart</span>
+                            <span>Charge</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <style>
+        .nav-btn {
+            background: #e0e0e0;
+            color: #333;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .nav-btn.active {
+            background: var(--primary-green);
+            color: white;
+        }
+    </style>
+
+    <script>
+        function showScreen(screenId) {
+            // Hide all screens
+            document.querySelectorAll('.screen').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+
+            // Show selected
+            const screen = document.getElementById(screenId + '-screen');
+            screen.style.display = 'flex';
+            screen.classList.add('active');
+            
+            // Update nav
+            const btnIndex = screenId === 'login' ? 0 : screenId === 'home' ? 1 : 2;
+            document.querySelectorAll('.nav-btn')[btnIndex].classList.add('active');
+        }
+    </script>
+</div>
+
+</body>
+</html>
