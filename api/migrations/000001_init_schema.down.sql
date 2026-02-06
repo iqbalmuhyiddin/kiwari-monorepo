@@ -1,0 +1,31 @@
+DROP TRIGGER IF EXISTS set_updated_at ON orders;
+DROP TRIGGER IF EXISTS set_updated_at ON customers;
+DROP TRIGGER IF EXISTS set_updated_at ON products;
+DROP TRIGGER IF EXISTS set_updated_at ON users;
+DROP TRIGGER IF EXISTS set_updated_at ON outlets;
+DROP FUNCTION IF EXISTS trigger_set_updated_at;
+
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS order_item_modifiers;
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS customers;
+DROP TABLE IF EXISTS combo_items;
+DROP TABLE IF EXISTS modifiers;
+DROP TABLE IF EXISTS modifier_groups;
+DROP TABLE IF EXISTS variants;
+DROP TABLE IF EXISTS variant_groups;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS outlets;
+
+DROP TYPE IF EXISTS discount_type;
+DROP TYPE IF EXISTS payment_status;
+DROP TYPE IF EXISTS payment_method;
+DROP TYPE IF EXISTS kitchen_station;
+DROP TYPE IF EXISTS catering_status;
+DROP TYPE IF EXISTS order_item_status;
+DROP TYPE IF EXISTS order_status;
+DROP TYPE IF EXISTS order_type;
+DROP TYPE IF EXISTS user_role;
