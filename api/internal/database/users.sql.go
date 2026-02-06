@@ -12,6 +12,46 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createUser = `-- name: CreateUser :one
+INSERT INTO users (outlet_id, email, hashed_password, full_name, role, pin)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, outlet_id, email, hashed_password, full_name, role, pin, is_active, created_at, updated_at
+`
+
+type CreateUserParams struct {
+	OutletID       uuid.UUID   `json:"outlet_id"`
+	Email          string      `json:"email"`
+	HashedPassword string      `json:"hashed_password"`
+	FullName       string      `json:"full_name"`
+	Role           UserRole    `json:"role"`
+	Pin            pgtype.Text `json:"pin"`
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, createUser,
+		arg.OutletID,
+		arg.Email,
+		arg.HashedPassword,
+		arg.FullName,
+		arg.Role,
+		arg.Pin,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.OutletID,
+		&i.Email,
+		&i.HashedPassword,
+		&i.FullName,
+		&i.Role,
+		&i.Pin,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, outlet_id, email, hashed_password, full_name, role, pin, is_active, created_at, updated_at FROM users WHERE email = $1 AND is_active = true
 `
@@ -67,6 +107,97 @@ type GetUserByOutletAndPinParams struct {
 
 func (q *Queries) GetUserByOutletAndPin(ctx context.Context, arg GetUserByOutletAndPinParams) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByOutletAndPin, arg.OutletID, arg.Pin)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.OutletID,
+		&i.Email,
+		&i.HashedPassword,
+		&i.FullName,
+		&i.Role,
+		&i.Pin,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const listUsersByOutlet = `-- name: ListUsersByOutlet :many
+SELECT id, outlet_id, email, hashed_password, full_name, role, pin, is_active, created_at, updated_at FROM users WHERE outlet_id = $1 AND is_active = true ORDER BY full_name
+`
+
+func (q *Queries) ListUsersByOutlet(ctx context.Context, outletID uuid.UUID) ([]User, error) {
+	rows, err := q.db.Query(ctx, listUsersByOutlet, outletID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.OutletID,
+			&i.Email,
+			&i.HashedPassword,
+			&i.FullName,
+			&i.Role,
+			&i.Pin,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const softDeleteUser = `-- name: SoftDeleteUser :one
+UPDATE users SET is_active = false, updated_at = now() WHERE id = $1 AND outlet_id = $2 AND is_active = true RETURNING id
+`
+
+type SoftDeleteUserParams struct {
+	ID       uuid.UUID `json:"id"`
+	OutletID uuid.UUID `json:"outlet_id"`
+}
+
+func (q *Queries) SoftDeleteUser(ctx context.Context, arg SoftDeleteUserParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, softDeleteUser, arg.ID, arg.OutletID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users SET email = $1, full_name = $2, role = $3, pin = $4, updated_at = now()
+WHERE id = $5 AND outlet_id = $6 AND is_active = true
+RETURNING id, outlet_id, email, hashed_password, full_name, role, pin, is_active, created_at, updated_at
+`
+
+type UpdateUserParams struct {
+	Email    string      `json:"email"`
+	FullName string      `json:"full_name"`
+	Role     UserRole    `json:"role"`
+	Pin      pgtype.Text `json:"pin"`
+	ID       uuid.UUID   `json:"id"`
+	OutletID uuid.UUID   `json:"outlet_id"`
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUser,
+		arg.Email,
+		arg.FullName,
+		arg.Role,
+		arg.Pin,
+		arg.ID,
+		arg.OutletID,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
