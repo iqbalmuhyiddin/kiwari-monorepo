@@ -30,6 +30,9 @@ docker/data/
 *.iml
 .DS_Store
 
+# ── Worktrees ─────────────────────
+.worktrees/
+
 # ── Secrets ───────────────────────
 *.pem
 *.key
