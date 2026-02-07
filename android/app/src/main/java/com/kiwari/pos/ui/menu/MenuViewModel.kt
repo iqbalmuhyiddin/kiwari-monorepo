@@ -8,6 +8,7 @@ import com.kiwari.pos.data.model.Product
 import com.kiwari.pos.data.model.Result
 import com.kiwari.pos.data.repository.CartRepository
 import com.kiwari.pos.data.repository.MenuRepository
+import com.kiwari.pos.data.repository.SelectedProductRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -42,7 +43,8 @@ data class MenuUiState(
 @HiltViewModel
 class MenuViewModel @Inject constructor(
     private val menuRepository: MenuRepository,
-    private val cartRepository: CartRepository
+    private val cartRepository: CartRepository,
+    private val selectedProductRepository: SelectedProductRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MenuUiState())
@@ -151,6 +153,7 @@ class MenuViewModel @Inject constructor(
     fun onProductTapped(product: Product): Boolean {
         val hasRequired = _uiState.value.productVariantMap[product.id] == true
         if (hasRequired) {
+            selectedProductRepository.set(product)
             return false // Caller should navigate to customization
         }
         cartRepository.addSimpleProduct(product)

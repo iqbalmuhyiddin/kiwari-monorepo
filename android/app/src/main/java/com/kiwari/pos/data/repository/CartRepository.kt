@@ -33,7 +33,7 @@ class CartRepository @Inject constructor() {
         _items.update { currentItems ->
             val existing = currentItems.find { item ->
                 item.product.id == product.id
-                        && item.selectedVariant == null
+                        && item.selectedVariants.isEmpty()
                         && item.selectedModifiers.isEmpty()
                         && item.notes.isEmpty()
             }
@@ -45,7 +45,7 @@ class CartRepository @Inject constructor() {
                             quantity = newQty,
                             lineTotal = calculateLineTotal(
                                 product.basePrice,
-                                null,
+                                emptyList(),
                                 emptyList(),
                                 newQty
                             )
@@ -74,14 +74,14 @@ class CartRepository @Inject constructor() {
      */
     fun addCustomizedProduct(
         product: Product,
-        selectedVariant: SelectedVariant?,
+        selectedVariants: List<SelectedVariant>,
         selectedModifiers: List<SelectedModifier>,
         quantity: Int = 1,
         notes: String = ""
     ) {
         val lineTotal = calculateLineTotal(
             product.basePrice,
-            selectedVariant,
+            selectedVariants,
             selectedModifiers,
             quantity
         )
@@ -89,7 +89,7 @@ class CartRepository @Inject constructor() {
             currentItems + CartItem(
                 id = UUID.randomUUID().toString(),
                 product = product,
-                selectedVariant = selectedVariant,
+                selectedVariants = selectedVariants,
                 selectedModifiers = selectedModifiers,
                 quantity = quantity,
                 notes = notes,
@@ -113,7 +113,7 @@ class CartRepository @Inject constructor() {
                         quantity = newQuantity,
                         lineTotal = calculateLineTotal(
                             item.product.basePrice,
-                            item.selectedVariant,
+                            item.selectedVariants,
                             item.selectedModifiers,
                             newQuantity
                         )
@@ -163,12 +163,12 @@ class CartRepository @Inject constructor() {
 
     private fun calculateLineTotal(
         basePriceStr: String,
-        variant: SelectedVariant?,
+        variants: List<SelectedVariant>,
         modifiers: List<SelectedModifier>,
         quantity: Int
     ): BigDecimal {
         val basePrice = BigDecimal(basePriceStr)
-        val variantAdj = variant?.priceAdjustment ?: BigDecimal.ZERO
+        val variantAdj = variants.fold(BigDecimal.ZERO) { acc, v -> acc.add(v.priceAdjustment) }
         val modifierTotal = modifiers.fold(BigDecimal.ZERO) { acc, mod -> acc.add(mod.price) }
         val unitPrice = basePrice.add(variantAdj).add(modifierTotal)
         return unitPrice.multiply(BigDecimal(quantity))

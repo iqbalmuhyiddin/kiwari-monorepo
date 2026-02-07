@@ -9,7 +9,7 @@ import java.math.BigDecimal
 data class CartItem(
     val id: String, // Local UUID to identify this specific cart item
     val product: Product,
-    val selectedVariant: SelectedVariant? = null,
+    val selectedVariants: List<SelectedVariant> = emptyList(),
     val selectedModifiers: List<SelectedModifier> = emptyList(),
     val quantity: Int,
     val notes: String = "",

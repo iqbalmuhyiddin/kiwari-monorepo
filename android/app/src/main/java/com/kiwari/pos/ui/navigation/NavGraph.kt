@@ -16,6 +16,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.kiwari.pos.data.repository.TokenRepository
 import com.kiwari.pos.ui.login.LoginScreen
+import com.kiwari.pos.ui.menu.CustomizationScreen
 import com.kiwari.pos.ui.menu.MenuScreen
 
 sealed class Screen(val route: String) {
@@ -81,9 +82,11 @@ fun NavGraph(
             route = Screen.Customization.route,
             arguments = listOf(navArgument("productId") { type = NavType.StringType })
         ) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Coming soon")
-            }
+            CustomizationScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
         }
     }
 }
