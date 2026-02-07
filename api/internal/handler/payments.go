@@ -170,6 +170,12 @@ func (h *PaymentHandler) Add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Cannot add payment to COMPLETED orders
+	if order.Status == database.OrderStatusCOMPLETED {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "cannot add payment to completed order"})
+		return
+	}
+
 	// Check if order is already fully paid
 	totalPaid, err := txStore.SumPaymentsByOrder(r.Context(), orderID)
 	if err != nil {

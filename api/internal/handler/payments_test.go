@@ -471,6 +471,37 @@ func TestAddPayment_CancelledOrder(t *testing.T) {
 	}
 }
 
+func TestAddPayment_CompletedOrder(t *testing.T) {
+	store := newMockPaymentStore()
+	outletID := uuid.New()
+	orderID := uuid.New()
+	userID := uuid.New()
+
+	store.orders[orderID] = database.Order{
+		ID:          orderID,
+		OutletID:    outletID,
+		OrderNumber: "ORD-007b",
+		Status:      database.OrderStatusCOMPLETED,
+		TotalAmount: decimalToNumeric(decimal.NewFromInt(100000)),
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	claims := &auth.Claims{UserID: userID, OutletID: outletID, Role: "CASHIER"}
+	router := setupPaymentRouterWithStore(store, claims)
+
+	rr := doAuthRequest(t, router, "POST",
+		"/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/payments",
+		map[string]interface{}{
+			"payment_method": "QRIS",
+			"amount":         "100000",
+		}, claims)
+
+	if rr.Code != http.StatusConflict {
+		t.Errorf("status: got %d, want %d (completed order)", rr.Code, http.StatusConflict)
+	}
+}
+
 func TestAddPayment_AlreadyFullyPaid(t *testing.T) {
 	store := newMockPaymentStore()
 	outletID := uuid.New()
@@ -481,7 +512,7 @@ func TestAddPayment_AlreadyFullyPaid(t *testing.T) {
 		ID:          orderID,
 		OutletID:    outletID,
 		OrderNumber: "ORD-008",
-		Status:      database.OrderStatusCOMPLETED,
+		Status:      database.OrderStatusNEW,
 		TotalAmount: decimalToNumeric(decimal.NewFromInt(100000)),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
