@@ -113,5 +113,7 @@ Production runs on Tencent Cloud VPS at `nasibakarkiwari.com`:
 ## Reference Documents
 
 - `docs/plans/2026-02-06-pos-system-design.md` — full design: data model, API endpoints, screen flows, deployment architecture
-- `docs/plans/2026-02-06-pos-implementation-plan.md` — step-by-step build plan with 10 milestones
+- `docs/plans/2026-02-06-backend-plan.md` — backend build plan (M1-7 done), Docker, Deploy
+- `docs/plans/2026-02-06-android-pos-plan.md` — Android POS plan (M8, priority)
+- `docs/plans/2026-02-06-sveltekit-admin-plan.md` — SvelteKit Admin plan (M9)
 - `PROGRESS.md` — implementation progress tracker

@@ -1,6 +1,9 @@
 # POS Implementation Progress
 
-Tracking execution of `2026-02-06-pos-implementation-plan.md`.
+Tracking execution of the implementation plan (split into three files):
+- `docs/plans/2026-02-06-backend-plan.md` — Go API (M1-7 done), Docker (M7), Deploy (M10)
+- `docs/plans/2026-02-06-android-pos-plan.md` — Android POS (M8) ← PRIORITY
+- `docs/plans/2026-02-06-sveltekit-admin-plan.md` — SvelteKit Admin (M9)
 
 ## Active Branch
 
@@ -62,6 +65,9 @@ Tracking execution of `2026-02-06-pos-implementation-plan.md`.
 
 ### Milestones 7-10 — NOT STARTED
 
+> **Note:** Milestones 8 (Android) and 9 (SvelteKit) have been split into separate plan files.
+> Android is priority. See plan file references at top of this document.
+
 ## Test Count
 
 401 unit tests passing (3 auth + 303 handler + 28 service + 7 middleware + 8 ws + 52 subtests) + 1 integration test (build tag: `integration`)
@@ -70,7 +76,7 @@ Tracking execution of `2026-02-06-pos-implementation-plan.md`.
 
 After `/clear`, use:
 ```
-Read PROGRESS.md and docs/plans/2026-02-06-pos-implementation-plan.md, then continue from the next pending task using subagent-driven-development. Working on main branch.
+Read PROGRESS.md and the relevant plan file (backend-plan.md, android-pos-plan.md, or sveltekit-admin-plan.md), then continue from the next pending task using subagent-driven-development. Working on main branch.
 ```
 
 ## Session Log
