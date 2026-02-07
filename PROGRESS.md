@@ -4,7 +4,7 @@ Tracking execution of `2026-02-06-pos-implementation-plan.md`.
 
 ## Active Branch
 
-`main` (worktree merged and cleaned up)
+`feature/milestone-5-crm-reports-ws` in `.worktrees/milestone-5-crm-reports-ws/`
 
 ## Milestones
 
