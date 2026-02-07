@@ -4,7 +4,7 @@ Tracking execution of `2026-02-06-pos-implementation-plan.md`.
 
 ## Active Branch
 
-`feature/milestone-5-crm-reports-ws` in `.worktrees/milestone-5-crm-reports-ws/`
+`main` (worktree merged and cleaned up)
 
 ## Milestones
 
@@ -45,19 +45,19 @@ Tracking execution of `2026-02-06-pos-implementation-plan.md`.
 | 4.3: Order Item Modifications | Done | `d06f626` | POST add item, PUT update qty/notes, DELETE remove item, PATCH kitchen status. Tx-wrapped writes, order total recalc. 25 tests |
 | 4.4: Multi-Payment | Done | `a248215`, `8a95339` | POST add payment, GET list payments. CASH/QRIS/TRANSFER, change calculation, overpayment prevention, auto-complete order on full payment. Catering lifecycle: BOOKED→DP_PAID→SETTLED. TOCTOU fix: SELECT FOR NO KEY UPDATE inside tx. Post-review fix: explicit COMPLETED order guard. 21 tests |
 
-### Milestone 5: Go API — CRM, Reports, WebSocket — IN PROGRESS
+### Milestone 5: Go API — CRM, Reports, WebSocket — DONE
 
 | Task | Status | Commit | Notes |
 |------|--------|--------|-------|
 | 5.1: Customer CRUD + Stats | Done | `347fb81` | 7 endpoints: list (search), get, create, update, soft-delete, stats (total_spend/avg_ticket/top_items), order history. Unique phone constraint handling (409). Stats scoped by outlet_id. 24 tests |
-| 5.2: Reports Endpoints | Pending | | |
-| 5.3: WebSocket for Live Order Updates | Pending | | |
+| 5.2: Reports Endpoints | Done | `593b81e` | 5 endpoints: daily-sales, product-sales, payment-summary, hourly-sales, outlet-comparison. All with date range filtering (Asia/Jakarta timezone). Owner-only outlet-comparison. Strongly-typed sqlc params (end-of-day computed in Go). 12 tests |
+| 5.3: WebSocket for Live Order Updates | Done | `c2026f6` | Hub with per-outlet rooms, Client with ReadPump/WritePump, ServeWS handler with JWT auth via query param. Events: order.created/updated, item.updated, order.paid. gorilla/websocket. Thread-safe broadcast with write lock. 8 tests |
 
 ### Milestones 6-10 — NOT STARTED
 
 ## Test Count
 
-381 tests passing (3 auth + 291 handler + 28 service + 7 middleware)
+401 tests passing (3 auth + 303 handler + 28 service + 7 middleware + 8 ws + 52 subtests)
 
 ## Resume Prompt
 
@@ -73,3 +73,4 @@ Read PROGRESS.md and docs/plans/2026-02-06-pos-implementation-plan.md, then cont
 - **2026-02-07**: Session 3 — Completed 4.2 (Order Queries & Status) and 4.3 (Order Item Modifications). Each went through full subagent-driven-development cycle. Key review findings fixed: (4.2) TOCTOU race on status transitions → added WHERE status=$current to SQL, completed_at never set → CASE WHEN COMPLETED, inconsistent cancel rules → synced PATCH/DELETE. (4.3) Runtime blocker: updated_at column missing from order_items → removed from SQL, no transaction on AddItem → added TxBeginner to handler, kitchen status on cancelled orders → added status check. 336 tests passing.
 - **2026-02-07**: Session 4 — Completed 4.4 (Multi-Payment) and 5.1 (Customer CRUD + Stats). Milestone 4 now DONE. Milestone 5 started. Key review findings fixed: (4.4) Spec review caught TOCTOU race on payment validation → moved GetOrder+SumPayments inside tx with SELECT FOR NO KEY UPDATE row lock. Code quality approved. (5.1) Both reviewers caught missing GET single customer endpoint → added. Code quality reviewer caught stats queries not scoped by outlet_id → added AND o.outlet_id=$2. Also flagged LIKE wildcard injection and soft-delete vs unique constraint — deferred as schema-level concerns. 380 tests passing.
 - **2026-02-07**: Session 5 — Merged `feature/milestone-2-auth` worktree into `main` (fast-forward, 15 commits). Worktree and branch cleaned up. Post-merge review of Task 4.4 (Multi-Payment): code quality reviewer caught that COMPLETED orders weren't explicitly blocked from accepting payments (only indirectly via sum check). Fix: added explicit COMPLETED guard + test, also fixed `TestAddPayment_AlreadyFullyPaid` which was silently testing wrong code path after guard addition (changed order status from COMPLETED→NEW). 381 tests passing.
+- **2026-02-07**: Session 6 — Completed 5.2 (Reports) and 5.3 (WebSocket). Milestone 5 now DONE. Used worktree `feature/milestone-5-crm-reports-ws`, merged to main (fast-forward, 2 commits). Key review findings fixed: (5.2) Timezone mismatch — `time.Parse` produces UTC but orders are Asia/Jakarta, early morning orders missed → fixed with `time.ParseInLocation("2006-01-02", s, jakartaLoc)`. Untyped sqlc params from `$3 + interval '1 day'` → moved end-of-day to Go. Test package `handler` → `handler_test`. Added date range validation. (5.3) Misleading mutex in broadcast → changed to single write lock covering entire broadcast body. 401 tests passing.
