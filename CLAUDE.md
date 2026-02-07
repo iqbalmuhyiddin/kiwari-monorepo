@@ -97,7 +97,21 @@ Production runs on Tencent Cloud VPS at `nasibakarkiwari.com`:
 - All behind Nginx Proxy Manager on shared `proxy` Docker network
 - Cloudflare DNS with Full (Strict) SSL, WebSockets ON
 
+## Implementation Patterns
+
+- **Handler pattern**: Consumer-defines-interface (`AuthStore`, `UserStore`) for DB access. Mock-based unit tests with `httptest`. Chi router `RegisterRoutes(r chi.Router)`. Shared `writeJSON` helper with error logging.
+- **Validation**: Email requires `@`. PIN must be 4-6 digits. Duplicate email → 409 Conflict (catch pgconn error code `23505`). Soft delete with `:one` + `RETURNING id` for proper 404 on non-existent.
+- **PIN storage**: Plaintext by design — low-entropy, only grants cashier/kitchen access within known outlet.
+- **Worktrees**: Using `.worktrees/` directory for feature branch isolation.
+
+## Environment Notes
+
+- Go installed via Homebrew: `/opt/homebrew/bin/go`
+- `sqlc` and `migrate` at `~/go/bin/` — need `export PATH="$HOME/go/bin:$PATH"`
+- All `go` commands run from `api/` subdirectory (that's where `go.mod` lives)
+
 ## Reference Documents
 
 - `docs/plans/2026-02-06-pos-system-design.md` — full design: data model, API endpoints, screen flows, deployment architecture
 - `docs/plans/2026-02-06-pos-implementation-plan.md` — step-by-step build plan with 10 milestones
+- `PROGRESS.md` — implementation progress tracker
