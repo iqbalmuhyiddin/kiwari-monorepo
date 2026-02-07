@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/kiwari-pos/api/internal/auth"
 	"github.com/kiwari-pos/api/internal/database"
@@ -41,6 +42,17 @@ type mockOrderStore struct {
 	listPaymentsByOrderFn       func(ctx context.Context, orderID uuid.UUID) ([]database.Payment, error)
 	updateOrderStatusFn         func(ctx context.Context, arg database.UpdateOrderStatusParams) (database.Order, error)
 	cancelOrderFn               func(ctx context.Context, arg database.CancelOrderParams) (database.Order, error)
+	getOrderItemFn              func(ctx context.Context, arg database.GetOrderItemParams) (database.OrderItem, error)
+	updateOrderItemFn           func(ctx context.Context, arg database.UpdateOrderItemParams) (database.OrderItem, error)
+	deleteOrderItemFn           func(ctx context.Context, arg database.DeleteOrderItemParams) error
+	updateOrderItemStatusFn     func(ctx context.Context, arg database.UpdateOrderItemStatusParams) (database.OrderItem, error)
+	countOrderItemsFn           func(ctx context.Context, orderID uuid.UUID) (int64, error)
+	updateOrderTotalsFn         func(ctx context.Context, orderID uuid.UUID) (database.Order, error)
+	getProductForOrderFn        func(ctx context.Context, arg database.GetProductForOrderParams) (database.GetProductForOrderRow, error)
+	getVariantForOrderFn        func(ctx context.Context, variantID uuid.UUID) (database.GetVariantForOrderRow, error)
+	getModifierForOrderFn       func(ctx context.Context, modifierID uuid.UUID) (database.GetModifierForOrderRow, error)
+	createOrderItemFn           func(ctx context.Context, arg database.CreateOrderItemParams) (database.OrderItem, error)
+	createOrderItemModifierFn   func(ctx context.Context, arg database.CreateOrderItemModifierParams) (database.OrderItemModifier, error)
 }
 
 func (m *mockOrderStore) GetOrder(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
@@ -92,6 +104,159 @@ func (m *mockOrderStore) CancelOrder(ctx context.Context, arg database.CancelOrd
 	return database.Order{}, pgx.ErrNoRows
 }
 
+func (m *mockOrderStore) GetOrderItem(ctx context.Context, arg database.GetOrderItemParams) (database.OrderItem, error) {
+	if m.getOrderItemFn != nil {
+		return m.getOrderItemFn(ctx, arg)
+	}
+	return database.OrderItem{}, pgx.ErrNoRows
+}
+
+func (m *mockOrderStore) UpdateOrderItem(ctx context.Context, arg database.UpdateOrderItemParams) (database.OrderItem, error) {
+	if m.updateOrderItemFn != nil {
+		return m.updateOrderItemFn(ctx, arg)
+	}
+	return database.OrderItem{}, pgx.ErrNoRows
+}
+
+func (m *mockOrderStore) DeleteOrderItem(ctx context.Context, arg database.DeleteOrderItemParams) error {
+	if m.deleteOrderItemFn != nil {
+		return m.deleteOrderItemFn(ctx, arg)
+	}
+	return pgx.ErrNoRows
+}
+
+func (m *mockOrderStore) UpdateOrderItemStatus(ctx context.Context, arg database.UpdateOrderItemStatusParams) (database.OrderItem, error) {
+	if m.updateOrderItemStatusFn != nil {
+		return m.updateOrderItemStatusFn(ctx, arg)
+	}
+	return database.OrderItem{}, pgx.ErrNoRows
+}
+
+func (m *mockOrderStore) CountOrderItems(ctx context.Context, orderID uuid.UUID) (int64, error) {
+	if m.countOrderItemsFn != nil {
+		return m.countOrderItemsFn(ctx, orderID)
+	}
+	return 0, nil
+}
+
+func (m *mockOrderStore) UpdateOrderTotals(ctx context.Context, orderID uuid.UUID) (database.Order, error) {
+	if m.updateOrderTotalsFn != nil {
+		return m.updateOrderTotalsFn(ctx, orderID)
+	}
+	return database.Order{}, pgx.ErrNoRows
+}
+
+func (m *mockOrderStore) GetProductForOrder(ctx context.Context, arg database.GetProductForOrderParams) (database.GetProductForOrderRow, error) {
+	if m.getProductForOrderFn != nil {
+		return m.getProductForOrderFn(ctx, arg)
+	}
+	return database.GetProductForOrderRow{}, pgx.ErrNoRows
+}
+
+func (m *mockOrderStore) GetVariantForOrder(ctx context.Context, variantID uuid.UUID) (database.GetVariantForOrderRow, error) {
+	if m.getVariantForOrderFn != nil {
+		return m.getVariantForOrderFn(ctx, variantID)
+	}
+	return database.GetVariantForOrderRow{}, pgx.ErrNoRows
+}
+
+func (m *mockOrderStore) GetModifierForOrder(ctx context.Context, modifierID uuid.UUID) (database.GetModifierForOrderRow, error) {
+	if m.getModifierForOrderFn != nil {
+		return m.getModifierForOrderFn(ctx, modifierID)
+	}
+	return database.GetModifierForOrderRow{}, pgx.ErrNoRows
+}
+
+func (m *mockOrderStore) CreateOrderItem(ctx context.Context, arg database.CreateOrderItemParams) (database.OrderItem, error) {
+	if m.createOrderItemFn != nil {
+		return m.createOrderItemFn(ctx, arg)
+	}
+	return database.OrderItem{}, pgx.ErrNoRows
+}
+
+func (m *mockOrderStore) CreateOrderItemModifier(ctx context.Context, arg database.CreateOrderItemModifierParams) (database.OrderItemModifier, error) {
+	if m.createOrderItemModifierFn != nil {
+		return m.createOrderItemModifierFn(ctx, arg)
+	}
+	return database.OrderItemModifier{}, pgx.ErrNoRows
+}
+
+// --- Mock TxBeginner ---
+
+type mockTx struct {
+	commitFn   func(ctx context.Context) error
+	rollbackFn func(ctx context.Context) error
+}
+
+func (m *mockTx) Commit(ctx context.Context) error {
+	if m.commitFn != nil {
+		return m.commitFn(ctx)
+	}
+	return nil
+}
+
+func (m *mockTx) Rollback(ctx context.Context) error {
+	if m.rollbackFn != nil {
+		return m.rollbackFn(ctx)
+	}
+	return nil
+}
+
+func (m *mockTx) Begin(ctx context.Context) (pgx.Tx, error) {
+	return nil, nil
+}
+
+func (m *mockTx) Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error) {
+	return pgconn.CommandTag{}, nil
+}
+
+func (m *mockTx) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
+	return nil, nil
+}
+
+func (m *mockTx) QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row {
+	return nil
+}
+
+func (m *mockTx) CopyFrom(ctx context.Context, tableName pgx.Identifier, columnNames []string, rowSrc pgx.CopyFromSource) (int64, error) {
+	return 0, nil
+}
+
+func (m *mockTx) SendBatch(ctx context.Context, b *pgx.Batch) pgx.BatchResults {
+	return nil
+}
+
+func (m *mockTx) LargeObjects() pgx.LargeObjects {
+	return pgx.LargeObjects{}
+}
+
+func (m *mockTx) Prepare(ctx context.Context, name, sql string) (*pgconn.StatementDescription, error) {
+	return nil, nil
+}
+
+func (m *mockTx) Conn() *pgx.Conn {
+	return nil
+}
+
+type mockPool struct {
+	beginFn func(ctx context.Context) (pgx.Tx, error)
+}
+
+func (m *mockPool) Begin(ctx context.Context) (pgx.Tx, error) {
+	if m.beginFn != nil {
+		return m.beginFn(ctx)
+	}
+	// Return a mock transaction that commits successfully
+	return &mockTx{}, nil
+}
+
+// mockNewStore is a mock factory that returns the same store for transactions.
+func mockNewStore(store *mockOrderStore) func(db database.DBTX) handler.OrderStore {
+	return func(db database.DBTX) handler.OrderStore {
+		return store
+	}
+}
+
 // --- Test helpers ---
 
 const testJWTSecret = "test-secret-for-orders"
@@ -101,7 +266,9 @@ func setupOrderRouterWithAuth(svc *mockOrderService, claims *auth.Claims) *chi.M
 }
 
 func setupOrderRouterWithStore(svc *mockOrderService, store *mockOrderStore, claims *auth.Claims) *chi.Mux {
-	h := handler.NewOrderHandler(svc, store)
+	pool := &mockPool{}
+	newStore := mockNewStore(store)
+	h := handler.NewOrderHandler(svc, store, pool, newStore)
 	r := chi.NewRouter()
 	r.Use(middleware.Authenticate(testJWTSecret))
 	r.Route("/outlets/{oid}/orders", h.RegisterRoutes)
@@ -467,7 +634,10 @@ func TestOrderCreate_InvalidBody(t *testing.T) {
 
 func TestOrderCreate_NoAuth(t *testing.T) {
 	svc := &mockOrderService{}
-	h := handler.NewOrderHandler(svc, nil)
+	store := &mockOrderStore{}
+	pool := &mockPool{}
+	newStore := mockNewStore(store)
+	h := handler.NewOrderHandler(svc, store, pool, newStore)
 	r := chi.NewRouter()
 	r.Use(middleware.Authenticate(testJWTSecret))
 	r.Route("/outlets/{oid}/orders", h.RegisterRoutes)
@@ -1160,7 +1330,10 @@ func TestOrderList_InvalidOutletID(t *testing.T) {
 }
 
 func TestOrderList_NoAuth(t *testing.T) {
-	h := handler.NewOrderHandler(nil, &mockOrderStore{})
+	store := &mockOrderStore{}
+	pool := &mockPool{}
+	newStore := mockNewStore(store)
+	h := handler.NewOrderHandler(nil, store, pool, newStore)
 	r := chi.NewRouter()
 	r.Use(middleware.Authenticate(testJWTSecret))
 	r.Route("/outlets/{oid}/orders", h.RegisterRoutes)
@@ -1844,3 +2017,985 @@ func TestOrderCancel_ReadyOrder(t *testing.T) {
 	}
 }
 
+// --- Item modification endpoint tests ---
+
+func TestAddItem_HappyPath(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	productID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order.ID = orderID
+
+	product := database.GetProductForOrderRow{
+		ID:        productID,
+		OutletID:  outletID,
+		BasePrice: testNumeric("25000.00"),
+		Station:   database.NullKitchenStation{KitchenStation: database.KitchenStationGRILL, Valid: true},
+	}
+
+	createdItem := database.OrderItem{
+		ID:             itemID,
+		OrderID:        orderID,
+		ProductID:      productID,
+		Quantity:       2,
+		UnitPrice:      testNumeric("25000.00"),
+		DiscountAmount: testNumeric("0.00"),
+		Subtotal:       testNumeric("50000.00"),
+		Status:         database.OrderItemStatusPENDING,
+	}
+
+	updatedOrder := order
+	updatedOrder.Subtotal = testNumeric("50000.00")
+	updatedOrder.TotalAmount = testNumeric("50000.00")
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+		getProductForOrderFn: func(ctx context.Context, arg database.GetProductForOrderParams) (database.GetProductForOrderRow, error) {
+			if arg.ID != productID || arg.OutletID != outletID {
+				t.Errorf("product params mismatch")
+			}
+			return product, nil
+		},
+		createOrderItemFn: func(ctx context.Context, arg database.CreateOrderItemParams) (database.OrderItem, error) {
+			if arg.Quantity != 2 {
+				t.Errorf("quantity: got %d, want 2", arg.Quantity)
+			}
+			return createdItem, nil
+		},
+		updateOrderTotalsFn: func(ctx context.Context, orderID uuid.UUID) (database.Order, error) {
+			return updatedOrder, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "POST", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items", map[string]interface{}{
+		"product_id": productID.String(),
+		"quantity":   2,
+	}, claims)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusCreated, rr.Body.String())
+	}
+
+	resp := decodeOrderResponse(t, rr)
+	item := resp["item"].(map[string]interface{})
+	if item["quantity"] != float64(2) {
+		t.Errorf("item quantity: got %v, want 2", item["quantity"])
+	}
+}
+
+func TestAddItem_OrderNotNew(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusPREPARING)
+	order.ID = orderID
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "POST", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items", map[string]interface{}{
+		"product_id": uuid.New().String(),
+		"quantity":   1,
+	}, claims)
+
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusConflict, rr.Body.String())
+	}
+}
+
+func TestUpdateItem_HappyPath(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order.ID = orderID
+
+	currentItem := database.OrderItem{
+		ID:             itemID,
+		OrderID:        orderID,
+		ProductID:      uuid.New(),
+		Quantity:       2,
+		UnitPrice:      testNumeric("25000.00"),
+		DiscountAmount: testNumeric("0.00"),
+		Subtotal:       testNumeric("50000.00"),
+		Status:         database.OrderItemStatusPENDING,
+	}
+
+	updatedItem := currentItem
+	updatedItem.Quantity = 3
+	updatedItem.Subtotal = testNumeric("75000.00")
+	updatedItem.Notes = pgtype.Text{String: "extra spicy", Valid: true}
+
+	updatedOrder := order
+	updatedOrder.Subtotal = testNumeric("75000.00")
+	updatedOrder.TotalAmount = testNumeric("75000.00")
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+		getOrderItemFn: func(ctx context.Context, arg database.GetOrderItemParams) (database.OrderItem, error) {
+			if arg.ID == itemID && arg.OrderID == orderID {
+				return currentItem, nil
+			}
+			return database.OrderItem{}, pgx.ErrNoRows
+		},
+		listOrderItemModifiersFn: func(ctx context.Context, orderItemID uuid.UUID) ([]database.OrderItemModifier, error) {
+			return []database.OrderItemModifier{}, nil
+		},
+		updateOrderItemFn: func(ctx context.Context, arg database.UpdateOrderItemParams) (database.OrderItem, error) {
+			if arg.Quantity != 3 {
+				t.Errorf("quantity: got %d, want 3", arg.Quantity)
+			}
+			return updatedItem, nil
+		},
+		updateOrderTotalsFn: func(ctx context.Context, orderID uuid.UUID) (database.Order, error) {
+			return updatedOrder, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "PUT", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items/"+itemID.String(), map[string]interface{}{
+		"quantity": 3,
+		"notes":    "extra spicy",
+	}, claims)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+
+	resp := decodeOrderResponse(t, rr)
+	item := resp["item"].(map[string]interface{})
+	if item["quantity"] != float64(3) {
+		t.Errorf("item quantity: got %v, want 3", item["quantity"])
+	}
+}
+
+func TestRemoveItem_HappyPath(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order.ID = orderID
+
+	item := database.OrderItem{
+		ID:      itemID,
+		OrderID: orderID,
+	}
+
+	updatedOrder := order
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+		countOrderItemsFn: func(ctx context.Context, orderID uuid.UUID) (int64, error) {
+			return 2, nil
+		},
+		getOrderItemFn: func(ctx context.Context, arg database.GetOrderItemParams) (database.OrderItem, error) {
+			return item, nil
+		},
+		deleteOrderItemFn: func(ctx context.Context, arg database.DeleteOrderItemParams) error {
+			return nil
+		},
+		updateOrderTotalsFn: func(ctx context.Context, orderID uuid.UUID) (database.Order, error) {
+			return updatedOrder, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "DELETE", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items/"+itemID.String(), nil, claims)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+}
+
+func TestRemoveItem_LastItem(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order.ID = orderID
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+		countOrderItemsFn: func(ctx context.Context, orderID uuid.UUID) (int64, error) {
+			return 1, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "DELETE", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items/"+itemID.String(), nil, claims)
+
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusConflict, rr.Body.String())
+	}
+}
+
+func TestUpdateItemStatus_PendingToPreparing(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrder(outletID)
+	order.ID = orderID
+
+	currentItem := database.OrderItem{
+		ID:      itemID,
+		OrderID: orderID,
+		Status:  database.OrderItemStatusPENDING,
+	}
+
+	updatedItem := currentItem
+	updatedItem.Status = database.OrderItemStatusPREPARING
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+		getOrderItemFn: func(ctx context.Context, arg database.GetOrderItemParams) (database.OrderItem, error) {
+			return currentItem, nil
+		},
+		updateOrderItemStatusFn: func(ctx context.Context, arg database.UpdateOrderItemStatusParams) (database.OrderItem, error) {
+			if arg.Status != database.OrderItemStatusPREPARING {
+				t.Errorf("status: got %v, want PREPARING", arg.Status)
+			}
+			return updatedItem, nil
+		},
+		listOrderItemModifiersFn: func(ctx context.Context, orderItemID uuid.UUID) ([]database.OrderItemModifier, error) {
+			return []database.OrderItemModifier{}, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "PATCH", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items/"+itemID.String()+"/status", map[string]string{
+		"status": "PREPARING",
+	}, claims)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+
+	resp := decodeOrderResponse(t, rr)
+	if resp["status"] != "PREPARING" {
+		t.Errorf("status: got %v, want PREPARING", resp["status"])
+	}
+}
+
+func TestUpdateItemStatus_InvalidTransition(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrder(outletID)
+	order.ID = orderID
+
+	currentItem := database.OrderItem{
+		ID:      itemID,
+		OrderID: orderID,
+		Status:  database.OrderItemStatusREADY,
+	}
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+		getOrderItemFn: func(ctx context.Context, arg database.GetOrderItemParams) (database.OrderItem, error) {
+			return currentItem, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "PATCH", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items/"+itemID.String()+"/status", map[string]string{
+		"status": "PREPARING",
+	}, claims)
+
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusConflict, rr.Body.String())
+	}
+}
+
+// --- Additional AddItem Tests ---
+
+func TestAddItem_WithVariant(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	productID := uuid.New()
+	variantID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order.ID = orderID
+
+	product := database.GetProductForOrderRow{
+		ID:        productID,
+		OutletID:  outletID,
+		BasePrice: testNumeric("25000.00"),
+		Station:   database.NullKitchenStation{KitchenStation: database.KitchenStationGRILL, Valid: true},
+	}
+
+	variant := database.GetVariantForOrderRow{
+		ID:              variantID,
+		ProductID:       productID,
+		PriceAdjustment: testNumeric("5000.00"),
+	}
+
+	createdItem := database.OrderItem{
+		ID:             itemID,
+		OrderID:        orderID,
+		ProductID:      productID,
+		VariantID:      pgtype.UUID{Bytes: variantID, Valid: true},
+		Quantity:       1,
+		UnitPrice:      testNumeric("30000.00"), // base + variant adjustment
+		DiscountAmount: testNumeric("0.00"),
+		Subtotal:       testNumeric("30000.00"),
+		Status:         database.OrderItemStatusPENDING,
+	}
+
+	updatedOrder := order
+	updatedOrder.Subtotal = testNumeric("30000.00")
+	updatedOrder.TotalAmount = testNumeric("30000.00")
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+		getProductForOrderFn: func(ctx context.Context, arg database.GetProductForOrderParams) (database.GetProductForOrderRow, error) {
+			return product, nil
+		},
+		getVariantForOrderFn: func(ctx context.Context, vid uuid.UUID) (database.GetVariantForOrderRow, error) {
+			if vid != variantID {
+				t.Errorf("variant ID mismatch")
+			}
+			return variant, nil
+		},
+		createOrderItemFn: func(ctx context.Context, arg database.CreateOrderItemParams) (database.OrderItem, error) {
+			return createdItem, nil
+		},
+		updateOrderTotalsFn: func(ctx context.Context, orderID uuid.UUID) (database.Order, error) {
+			return updatedOrder, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "POST", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items", map[string]interface{}{
+		"product_id": productID.String(),
+		"variant_id": variantID.String(),
+		"quantity":   1,
+	}, claims)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusCreated, rr.Body.String())
+	}
+}
+
+func TestAddItem_WithModifiers(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	productID := uuid.New()
+	modifierID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order.ID = orderID
+
+	product := database.GetProductForOrderRow{
+		ID:        productID,
+		OutletID:  outletID,
+		BasePrice: testNumeric("25000.00"),
+		Station:   database.NullKitchenStation{KitchenStation: database.KitchenStationGRILL, Valid: true},
+	}
+
+	modifier := database.GetModifierForOrderRow{
+		ID:        modifierID,
+		ProductID: productID,
+		Price:     testNumeric("5000.00"),
+	}
+
+	createdItem := database.OrderItem{
+		ID:             itemID,
+		OrderID:        orderID,
+		ProductID:      productID,
+		Quantity:       1,
+		UnitPrice:      testNumeric("25000.00"),
+		DiscountAmount: testNumeric("0.00"),
+		Subtotal:       testNumeric("30000.00"), // base + modifier
+		Status:         database.OrderItemStatusPENDING,
+	}
+
+	createdModifier := database.OrderItemModifier{
+		ID:          uuid.New(),
+		OrderItemID: itemID,
+		ModifierID:  modifierID,
+		Quantity:    1,
+		UnitPrice:   testNumeric("5000.00"),
+	}
+
+	updatedOrder := order
+	updatedOrder.Subtotal = testNumeric("30000.00")
+	updatedOrder.TotalAmount = testNumeric("30000.00")
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+		getProductForOrderFn: func(ctx context.Context, arg database.GetProductForOrderParams) (database.GetProductForOrderRow, error) {
+			return product, nil
+		},
+		getModifierForOrderFn: func(ctx context.Context, mid uuid.UUID) (database.GetModifierForOrderRow, error) {
+			if mid != modifierID {
+				t.Errorf("modifier ID mismatch")
+			}
+			return modifier, nil
+		},
+		createOrderItemFn: func(ctx context.Context, arg database.CreateOrderItemParams) (database.OrderItem, error) {
+			return createdItem, nil
+		},
+		createOrderItemModifierFn: func(ctx context.Context, arg database.CreateOrderItemModifierParams) (database.OrderItemModifier, error) {
+			return createdModifier, nil
+		},
+		updateOrderTotalsFn: func(ctx context.Context, orderID uuid.UUID) (database.Order, error) {
+			return updatedOrder, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "POST", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items", map[string]interface{}{
+		"product_id": productID.String(),
+		"quantity":   1,
+		"modifiers": []map[string]interface{}{
+			{
+				"modifier_id": modifierID.String(),
+				"quantity":    1,
+			},
+		},
+	}, claims)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusCreated, rr.Body.String())
+	}
+}
+
+func TestAddItem_WithItemDiscount(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	productID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order.ID = orderID
+
+	product := database.GetProductForOrderRow{
+		ID:        productID,
+		OutletID:  outletID,
+		BasePrice: testNumeric("25000.00"),
+		Station:   database.NullKitchenStation{KitchenStation: database.KitchenStationGRILL, Valid: true},
+	}
+
+	createdItem := database.OrderItem{
+		ID:        itemID,
+		OrderID:   orderID,
+		ProductID: productID,
+		Quantity:  2,
+		UnitPrice: testNumeric("25000.00"),
+		DiscountType: database.NullDiscountType{
+			DiscountType: database.DiscountTypePERCENTAGE,
+			Valid:        true,
+		},
+		DiscountValue:  testNumeric("10.00"),
+		DiscountAmount: testNumeric("5000.00"), // 10% of 50000
+		Subtotal:       testNumeric("45000.00"),
+		Status:         database.OrderItemStatusPENDING,
+	}
+
+	updatedOrder := order
+	updatedOrder.Subtotal = testNumeric("45000.00")
+	updatedOrder.TotalAmount = testNumeric("45000.00")
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+		getProductForOrderFn: func(ctx context.Context, arg database.GetProductForOrderParams) (database.GetProductForOrderRow, error) {
+			return product, nil
+		},
+		createOrderItemFn: func(ctx context.Context, arg database.CreateOrderItemParams) (database.OrderItem, error) {
+			return createdItem, nil
+		},
+		updateOrderTotalsFn: func(ctx context.Context, orderID uuid.UUID) (database.Order, error) {
+			return updatedOrder, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "POST", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items", map[string]interface{}{
+		"product_id":     productID.String(),
+		"quantity":       2,
+		"discount_type":  "PERCENTAGE",
+		"discount_value": "10.00",
+	}, claims)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusCreated, rr.Body.String())
+	}
+}
+
+func TestAddItem_ProductNotFound(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	productID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order.ID = orderID
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+		getProductForOrderFn: func(ctx context.Context, arg database.GetProductForOrderParams) (database.GetProductForOrderRow, error) {
+			return database.GetProductForOrderRow{}, pgx.ErrNoRows
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "POST", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items", map[string]interface{}{
+		"product_id": productID.String(),
+		"quantity":   1,
+	}, claims)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusBadRequest, rr.Body.String())
+	}
+}
+
+func TestAddItem_InvalidProductID(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order.ID = orderID
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "POST", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items", map[string]interface{}{
+		"product_id": "invalid-uuid",
+		"quantity":   1,
+	}, claims)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusBadRequest, rr.Body.String())
+	}
+}
+
+func TestAddItem_MissingProductID(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order.ID = orderID
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "POST", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items", map[string]interface{}{
+		"quantity": 1,
+	}, claims)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusBadRequest, rr.Body.String())
+	}
+}
+
+func TestAddItem_ZeroQuantity(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order.ID = orderID
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "POST", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items", map[string]interface{}{
+		"product_id": uuid.New().String(),
+		"quantity":   0,
+	}, claims)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusBadRequest, rr.Body.String())
+	}
+}
+
+func TestAddItem_OrderNotFound(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return database.Order{}, pgx.ErrNoRows
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "POST", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items", map[string]interface{}{
+		"product_id": uuid.New().String(),
+		"quantity":   1,
+	}, claims)
+
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusNotFound, rr.Body.String())
+	}
+}
+
+// --- Additional UpdateItem Tests ---
+
+func TestUpdateItem_OrderNotNew(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusPREPARING)
+	order.ID = orderID
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "PUT", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items/"+itemID.String(), map[string]interface{}{
+		"quantity": 3,
+	}, claims)
+
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusConflict, rr.Body.String())
+	}
+}
+
+func TestUpdateItem_ItemNotFound(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order.ID = orderID
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+		getOrderItemFn: func(ctx context.Context, arg database.GetOrderItemParams) (database.OrderItem, error) {
+			return database.OrderItem{}, pgx.ErrNoRows
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "PUT", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items/"+itemID.String(), map[string]interface{}{
+		"quantity": 3,
+	}, claims)
+
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusNotFound, rr.Body.String())
+	}
+}
+
+func TestUpdateItem_ZeroQuantity(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order.ID = orderID
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "PUT", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items/"+itemID.String(), map[string]interface{}{
+		"quantity": 0,
+	}, claims)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusBadRequest, rr.Body.String())
+	}
+}
+
+// --- Additional RemoveItem Tests ---
+
+func TestRemoveItem_OrderNotNew(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusPREPARING)
+	order.ID = orderID
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "DELETE", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items/"+itemID.String(), nil, claims)
+
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusConflict, rr.Body.String())
+	}
+}
+
+func TestRemoveItem_ItemNotFound(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order.ID = orderID
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+		countOrderItemsFn: func(ctx context.Context, oid uuid.UUID) (int64, error) {
+			return 2, nil
+		},
+		getOrderItemFn: func(ctx context.Context, arg database.GetOrderItemParams) (database.OrderItem, error) {
+			return database.OrderItem{}, pgx.ErrNoRows
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "DELETE", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items/"+itemID.String(), nil, claims)
+
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusNotFound, rr.Body.String())
+	}
+}
+
+// --- Additional UpdateItemStatus Tests ---
+
+func TestUpdateItemStatus_PreparingToReady(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrder(outletID)
+	order.ID = orderID
+
+	currentItem := database.OrderItem{
+		ID:      itemID,
+		OrderID: orderID,
+		Status:  database.OrderItemStatusPREPARING,
+	}
+
+	updatedItem := currentItem
+	updatedItem.Status = database.OrderItemStatusREADY
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+		getOrderItemFn: func(ctx context.Context, arg database.GetOrderItemParams) (database.OrderItem, error) {
+			return currentItem, nil
+		},
+		updateOrderItemStatusFn: func(ctx context.Context, arg database.UpdateOrderItemStatusParams) (database.OrderItem, error) {
+			return updatedItem, nil
+		},
+		listOrderItemModifiersFn: func(ctx context.Context, orderItemID uuid.UUID) ([]database.OrderItemModifier, error) {
+			return []database.OrderItemModifier{}, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "PATCH", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items/"+itemID.String()+"/status", map[string]string{
+		"status": "READY",
+	}, claims)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+
+	resp := decodeOrderResponse(t, rr)
+	if resp["status"] != "READY" {
+		t.Errorf("status: got %v, want READY", resp["status"])
+	}
+}
+
+func TestUpdateItemStatus_MissingStatus(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	itemID := uuid.New()
+
+	router := setupOrderRouterWithStore(nil, &mockOrderStore{}, claims)
+	rr := doAuthRequest(t, router, "PATCH", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items/"+itemID.String()+"/status", map[string]string{}, claims)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusBadRequest, rr.Body.String())
+	}
+}
+
+func TestUpdateItemStatus_InvalidStatusValue(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	itemID := uuid.New()
+
+	router := setupOrderRouterWithStore(nil, &mockOrderStore{}, claims)
+	rr := doAuthRequest(t, router, "PATCH", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items/"+itemID.String()+"/status", map[string]string{
+		"status": "INVALID_STATUS",
+	}, claims)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusBadRequest, rr.Body.String())
+	}
+}
+
+func TestUpdateItemStatus_ItemNotFound(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrder(outletID)
+	order.ID = orderID
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+		getOrderItemFn: func(ctx context.Context, arg database.GetOrderItemParams) (database.OrderItem, error) {
+			return database.OrderItem{}, pgx.ErrNoRows
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "PATCH", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items/"+itemID.String()+"/status", map[string]string{
+		"status": "PREPARING",
+	}, claims)
+
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusNotFound, rr.Body.String())
+	}
+}
+
+func TestUpdateItemStatus_CancelledOrder(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusCANCELLED)
+	order.ID = orderID
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "PATCH", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items/"+itemID.String()+"/status", map[string]string{
+		"status": "PREPARING",
+	}, claims)
+
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusConflict, rr.Body.String())
+	}
+
+	resp := decodeOrderResponse(t, rr)
+	if resp["error"] == nil {
+		t.Fatal("expected error field")
+	}
+	errMsg := resp["error"].(string)
+	if errMsg != "cannot update items on a CANCELLED order" {
+		t.Fatalf("error message: got %q, want %q", errMsg, "cannot update items on a CANCELLED order")
+	}
+}
+
+func TestUpdateItemStatus_CompletedOrder(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	orderID := uuid.New()
+	itemID := uuid.New()
+
+	order := testDBOrderWithStatus(outletID, database.OrderStatusCOMPLETED)
+	order.ID = orderID
+
+	store := &mockOrderStore{
+		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
+			return order, nil
+		},
+	}
+
+	router := setupOrderRouterWithStore(nil, store, claims)
+	rr := doAuthRequest(t, router, "PATCH", "/outlets/"+outletID.String()+"/orders/"+orderID.String()+"/items/"+itemID.String()+"/status", map[string]string{
+		"status": "PREPARING",
+	}, claims)
+
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusConflict, rr.Body.String())
+	}
+
+	resp := decodeOrderResponse(t, rr)
+	if resp["error"] == nil {
+		t.Fatal("expected error field")
+	}
+	errMsg := resp["error"].(string)
+	if errMsg != "cannot update items on a COMPLETED order" {
+		t.Fatalf("error message: got %q, want %q", errMsg, "cannot update items on a COMPLETED order")
+	}
+}

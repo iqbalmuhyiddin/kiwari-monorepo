@@ -81,3 +81,48 @@ RETURNING *;
 
 -- name: ListPaymentsByOrder :many
 SELECT * FROM payments WHERE order_id = $1 ORDER BY processed_at;
+
+-- name: GetOrderItem :one
+SELECT * FROM order_items WHERE id = $1 AND order_id = $2;
+
+-- name: UpdateOrderItem :one
+UPDATE order_items SET
+    quantity = $3,
+    notes = $4,
+    discount_amount = $5,
+    subtotal = $6
+WHERE id = $1 AND order_id = $2
+RETURNING *;
+
+-- name: DeleteOrderItem :exec
+DELETE FROM order_items WHERE id = $1 AND order_id = $2;
+
+-- name: UpdateOrderItemStatus :one
+UPDATE order_items SET
+    status = $3
+WHERE id = $1 AND order_id = $2
+RETURNING *;
+
+-- name: CountOrderItems :one
+SELECT COUNT(*) FROM order_items WHERE order_id = $1;
+
+-- name: UpdateOrderTotals :one
+UPDATE orders SET
+    subtotal = (SELECT COALESCE(SUM(oi.subtotal), 0) FROM order_items oi WHERE oi.order_id = $1),
+    discount_amount = CASE
+        WHEN discount_type = 'PERCENTAGE' THEN
+            (SELECT COALESCE(SUM(oi.subtotal), 0) FROM order_items oi WHERE oi.order_id = $1) * discount_value / 100
+        WHEN discount_type = 'FIXED_AMOUNT' THEN LEAST(discount_value, (SELECT COALESCE(SUM(oi.subtotal), 0) FROM order_items oi WHERE oi.order_id = $1))
+        ELSE 0
+    END,
+    total_amount = (SELECT COALESCE(SUM(oi.subtotal), 0) FROM order_items oi WHERE oi.order_id = $1)
+        - CASE
+            WHEN discount_type = 'PERCENTAGE' THEN
+                (SELECT COALESCE(SUM(oi.subtotal), 0) FROM order_items oi WHERE oi.order_id = $1) * discount_value / 100
+            WHEN discount_type = 'FIXED_AMOUNT' THEN LEAST(discount_value, (SELECT COALESCE(SUM(oi.subtotal), 0) FROM order_items oi WHERE oi.order_id = $1))
+            ELSE 0
+        END
+        + tax_amount,
+    updated_at = now()
+WHERE id = $1
+RETURNING *;

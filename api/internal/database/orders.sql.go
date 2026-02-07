@@ -54,6 +54,17 @@ func (q *Queries) CancelOrder(ctx context.Context, arg CancelOrderParams) (Order
 	return i, err
 }
 
+const countOrderItems = `-- name: CountOrderItems :one
+SELECT COUNT(*) FROM order_items WHERE order_id = $1
+`
+
+func (q *Queries) CountOrderItems(ctx context.Context, orderID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countOrderItems, orderID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createOrder = `-- name: CreateOrder :one
 INSERT INTO orders (
     outlet_id, order_number, customer_id, order_type, table_number, notes,
@@ -229,6 +240,20 @@ func (q *Queries) CreateOrderItemModifier(ctx context.Context, arg CreateOrderIt
 	return i, err
 }
 
+const deleteOrderItem = `-- name: DeleteOrderItem :exec
+DELETE FROM order_items WHERE id = $1 AND order_id = $2
+`
+
+type DeleteOrderItemParams struct {
+	ID      uuid.UUID `json:"id"`
+	OrderID uuid.UUID `json:"order_id"`
+}
+
+func (q *Queries) DeleteOrderItem(ctx context.Context, arg DeleteOrderItemParams) error {
+	_, err := q.db.Exec(ctx, deleteOrderItem, arg.ID, arg.OrderID)
+	return err
+}
+
 const getModifierForOrder = `-- name: GetModifierForOrder :one
 SELECT m.id, m.price, mg.product_id
 FROM modifiers m
@@ -298,6 +323,36 @@ func (q *Queries) GetOrder(ctx context.Context, arg GetOrderParams) (Order, erro
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CompletedAt,
+	)
+	return i, err
+}
+
+const getOrderItem = `-- name: GetOrderItem :one
+SELECT id, order_id, product_id, variant_id, quantity, unit_price, discount_type, discount_value, discount_amount, subtotal, notes, status, station FROM order_items WHERE id = $1 AND order_id = $2
+`
+
+type GetOrderItemParams struct {
+	ID      uuid.UUID `json:"id"`
+	OrderID uuid.UUID `json:"order_id"`
+}
+
+func (q *Queries) GetOrderItem(ctx context.Context, arg GetOrderItemParams) (OrderItem, error) {
+	row := q.db.QueryRow(ctx, getOrderItem, arg.ID, arg.OrderID)
+	var i OrderItem
+	err := row.Scan(
+		&i.ID,
+		&i.OrderID,
+		&i.ProductID,
+		&i.VariantID,
+		&i.Quantity,
+		&i.UnitPrice,
+		&i.DiscountType,
+		&i.DiscountValue,
+		&i.DiscountAmount,
+		&i.Subtotal,
+		&i.Notes,
+		&i.Status,
+		&i.Station,
 	)
 	return i, err
 }
@@ -533,6 +588,87 @@ func (q *Queries) ListPaymentsByOrder(ctx context.Context, orderID uuid.UUID) ([
 	return items, nil
 }
 
+const updateOrderItem = `-- name: UpdateOrderItem :one
+UPDATE order_items SET
+    quantity = $3,
+    notes = $4,
+    discount_amount = $5,
+    subtotal = $6
+WHERE id = $1 AND order_id = $2
+RETURNING id, order_id, product_id, variant_id, quantity, unit_price, discount_type, discount_value, discount_amount, subtotal, notes, status, station
+`
+
+type UpdateOrderItemParams struct {
+	ID             uuid.UUID      `json:"id"`
+	OrderID        uuid.UUID      `json:"order_id"`
+	Quantity       int32          `json:"quantity"`
+	Notes          pgtype.Text    `json:"notes"`
+	DiscountAmount pgtype.Numeric `json:"discount_amount"`
+	Subtotal       pgtype.Numeric `json:"subtotal"`
+}
+
+func (q *Queries) UpdateOrderItem(ctx context.Context, arg UpdateOrderItemParams) (OrderItem, error) {
+	row := q.db.QueryRow(ctx, updateOrderItem,
+		arg.ID,
+		arg.OrderID,
+		arg.Quantity,
+		arg.Notes,
+		arg.DiscountAmount,
+		arg.Subtotal,
+	)
+	var i OrderItem
+	err := row.Scan(
+		&i.ID,
+		&i.OrderID,
+		&i.ProductID,
+		&i.VariantID,
+		&i.Quantity,
+		&i.UnitPrice,
+		&i.DiscountType,
+		&i.DiscountValue,
+		&i.DiscountAmount,
+		&i.Subtotal,
+		&i.Notes,
+		&i.Status,
+		&i.Station,
+	)
+	return i, err
+}
+
+const updateOrderItemStatus = `-- name: UpdateOrderItemStatus :one
+UPDATE order_items SET
+    status = $3
+WHERE id = $1 AND order_id = $2
+RETURNING id, order_id, product_id, variant_id, quantity, unit_price, discount_type, discount_value, discount_amount, subtotal, notes, status, station
+`
+
+type UpdateOrderItemStatusParams struct {
+	ID      uuid.UUID       `json:"id"`
+	OrderID uuid.UUID       `json:"order_id"`
+	Status  OrderItemStatus `json:"status"`
+}
+
+func (q *Queries) UpdateOrderItemStatus(ctx context.Context, arg UpdateOrderItemStatusParams) (OrderItem, error) {
+	row := q.db.QueryRow(ctx, updateOrderItemStatus, arg.ID, arg.OrderID, arg.Status)
+	var i OrderItem
+	err := row.Scan(
+		&i.ID,
+		&i.OrderID,
+		&i.ProductID,
+		&i.VariantID,
+		&i.Quantity,
+		&i.UnitPrice,
+		&i.DiscountType,
+		&i.DiscountValue,
+		&i.DiscountAmount,
+		&i.Subtotal,
+		&i.Notes,
+		&i.Status,
+		&i.Station,
+	)
+	return i, err
+}
+
 const updateOrderStatus = `-- name: UpdateOrderStatus :one
 UPDATE orders SET status = $3,
     completed_at = CASE WHEN $3 = 'COMPLETED' THEN now() ELSE completed_at END,
@@ -555,6 +691,59 @@ func (q *Queries) UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusPa
 		arg.Status,
 		arg.Status_2,
 	)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.OutletID,
+		&i.OrderNumber,
+		&i.CustomerID,
+		&i.OrderType,
+		&i.Status,
+		&i.TableNumber,
+		&i.Notes,
+		&i.Subtotal,
+		&i.DiscountType,
+		&i.DiscountValue,
+		&i.DiscountAmount,
+		&i.TaxAmount,
+		&i.TotalAmount,
+		&i.CateringDate,
+		&i.CateringStatus,
+		&i.CateringDpAmount,
+		&i.DeliveryPlatform,
+		&i.DeliveryAddress,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
+}
+
+const updateOrderTotals = `-- name: UpdateOrderTotals :one
+UPDATE orders SET
+    subtotal = (SELECT COALESCE(SUM(oi.subtotal), 0) FROM order_items oi WHERE oi.order_id = $1),
+    discount_amount = CASE
+        WHEN discount_type = 'PERCENTAGE' THEN
+            (SELECT COALESCE(SUM(oi.subtotal), 0) FROM order_items oi WHERE oi.order_id = $1) * discount_value / 100
+        WHEN discount_type = 'FIXED_AMOUNT' THEN LEAST(discount_value, (SELECT COALESCE(SUM(oi.subtotal), 0) FROM order_items oi WHERE oi.order_id = $1))
+        ELSE 0
+    END,
+    total_amount = (SELECT COALESCE(SUM(oi.subtotal), 0) FROM order_items oi WHERE oi.order_id = $1)
+        - CASE
+            WHEN discount_type = 'PERCENTAGE' THEN
+                (SELECT COALESCE(SUM(oi.subtotal), 0) FROM order_items oi WHERE oi.order_id = $1) * discount_value / 100
+            WHEN discount_type = 'FIXED_AMOUNT' THEN LEAST(discount_value, (SELECT COALESCE(SUM(oi.subtotal), 0) FROM order_items oi WHERE oi.order_id = $1))
+            ELSE 0
+        END
+        + tax_amount,
+    updated_at = now()
+WHERE id = $1
+RETURNING id, outlet_id, order_number, customer_id, order_type, status, table_number, notes, subtotal, discount_type, discount_value, discount_amount, tax_amount, total_amount, catering_date, catering_status, catering_dp_amount, delivery_platform, delivery_address, created_by, created_at, updated_at, completed_at
+`
+
+func (q *Queries) UpdateOrderTotals(ctx context.Context, orderID uuid.UUID) (Order, error) {
+	row := q.db.QueryRow(ctx, updateOrderTotals, orderID)
 	var i Order
 	err := row.Scan(
 		&i.ID,
