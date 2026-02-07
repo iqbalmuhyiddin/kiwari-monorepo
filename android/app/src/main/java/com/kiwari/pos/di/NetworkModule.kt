@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.kiwari.pos.BuildConfig
 import com.kiwari.pos.data.api.AuthApi
+import com.kiwari.pos.data.api.MenuApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -129,5 +130,14 @@ object NetworkModule {
     @Singleton
     fun provideAuthApi(retrofit: Retrofit): AuthApi {
         return retrofit.create(AuthApi::class.java)
+    }
+
+    /**
+     * MenuApi for menu/product endpoints (uses authenticated Retrofit).
+     */
+    @Provides
+    @Singleton
+    fun provideMenuApi(retrofit: Retrofit): MenuApi {
+        return retrofit.create(MenuApi::class.java)
     }
 }
