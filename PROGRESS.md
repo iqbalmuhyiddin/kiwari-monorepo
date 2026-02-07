@@ -4,7 +4,7 @@ Tracking execution of `2026-02-06-pos-implementation-plan.md`.
 
 ## Active Branch
 
-`main` (worktree merged and cleaned up)
+`main` (milestone-6 worktree merged and cleaned up)
 
 ## Milestones
 
@@ -53,11 +53,18 @@ Tracking execution of `2026-02-06-pos-implementation-plan.md`.
 | 5.2: Reports Endpoints | Done | `593b81e` | 5 endpoints: daily-sales, product-sales, payment-summary, hourly-sales, outlet-comparison. All with date range filtering (Asia/Jakarta timezone). Owner-only outlet-comparison. Strongly-typed sqlc params (end-of-day computed in Go). 12 tests |
 | 5.3: WebSocket for Live Order Updates | Done | `c2026f6` | Hub with per-outlet rooms, Client with ReadPump/WritePump, ServeWS handler with JWT auth via query param. Events: order.created/updated, item.updated, order.paid. gorilla/websocket. Thread-safe broadcast with write lock. 8 tests |
 
-### Milestones 6-10 — NOT STARTED
+### Milestone 6: Go API — Router Assembly & Integration Test — DONE
+
+| Task | Status | Commit | Notes |
+|------|--------|--------|-------|
+| 6.1: Wire Everything Together | Done | `92f4930` | router.go wiring all 11 handler groups into Chi router. Auth middleware on protected routes, RequireOutlet on outlet-scoped, RequireRole("OWNER") on reports. CORS for dev+prod. WebSocket route. main.go with pgxpool, graceful shutdown. Review fix: WriteTimeout 0 for WebSocket compatibility. |
+| 6.2: Integration Tests | Done | `8c5adf6` | End-to-end test with real PostgreSQL via testcontainers-go. Full lifecycle: outlet→user→login→category→product→variants→modifiers→order→multi-payment (CASH+QRIS split)→verify auto-complete→customer stats. Price snapshot assertion (57000.00). Build tag `integration`. Review fixes: split payment verification, price assertion, documentation comments. |
+
+### Milestones 7-10 — NOT STARTED
 
 ## Test Count
 
-401 tests passing (3 auth + 303 handler + 28 service + 7 middleware + 8 ws + 52 subtests)
+401 unit tests passing (3 auth + 303 handler + 28 service + 7 middleware + 8 ws + 52 subtests) + 1 integration test (build tag: `integration`)
 
 ## Resume Prompt
 
@@ -74,3 +81,4 @@ Read PROGRESS.md and docs/plans/2026-02-06-pos-implementation-plan.md, then cont
 - **2026-02-07**: Session 4 — Completed 4.4 (Multi-Payment) and 5.1 (Customer CRUD + Stats). Milestone 4 now DONE. Milestone 5 started. Key review findings fixed: (4.4) Spec review caught TOCTOU race on payment validation → moved GetOrder+SumPayments inside tx with SELECT FOR NO KEY UPDATE row lock. Code quality approved. (5.1) Both reviewers caught missing GET single customer endpoint → added. Code quality reviewer caught stats queries not scoped by outlet_id → added AND o.outlet_id=$2. Also flagged LIKE wildcard injection and soft-delete vs unique constraint — deferred as schema-level concerns. 380 tests passing.
 - **2026-02-07**: Session 5 — Merged `feature/milestone-2-auth` worktree into `main` (fast-forward, 15 commits). Worktree and branch cleaned up. Post-merge review of Task 4.4 (Multi-Payment): code quality reviewer caught that COMPLETED orders weren't explicitly blocked from accepting payments (only indirectly via sum check). Fix: added explicit COMPLETED guard + test, also fixed `TestAddPayment_AlreadyFullyPaid` which was silently testing wrong code path after guard addition (changed order status from COMPLETED→NEW). 381 tests passing.
 - **2026-02-07**: Session 6 — Completed 5.2 (Reports) and 5.3 (WebSocket). Milestone 5 now DONE. Used worktree `feature/milestone-5-crm-reports-ws`, merged to main (fast-forward, 2 commits). Key review findings fixed: (5.2) Timezone mismatch — `time.Parse` produces UTC but orders are Asia/Jakarta, early morning orders missed → fixed with `time.ParseInLocation("2006-01-02", s, jakartaLoc)`. Untyped sqlc params from `$3 + interval '1 day'` → moved end-of-day to Go. Test package `handler` → `handler_test`. Added date range validation. (5.3) Misleading mutex in broadcast → changed to single write lock covering entire broadcast body. 401 tests passing.
+- **2026-02-07**: Session 7 — Completed 6.1 (Router Assembly) and 6.2 (Integration Tests). Milestone 6 now DONE. Used worktree `feature/milestone-6-router-integration`, merged to main (fast-forward, 2 commits). Key review findings: (6.1) Spec reviewer confirmed all 11 handler groups wired correctly with proper middleware ordering. Code quality caught WriteTimeout:15s killing WebSocket connections → fixed to WriteTimeout:0 (WS pumps manage own deadlines). (6.2) Spec reviewer caught single-payment-as-multi and missing price assertion → fixed: split CASH+QRIS with partial payment verification, explicit total_amount==57000.00 assertion. Code quality approved with documentation additions (hub leak note, migration path comment, raw SQL justification). 401 unit tests + 1 integration test.
