@@ -56,3 +56,28 @@ SELECT * FROM order_items WHERE order_id = $1 ORDER BY id;
 
 -- name: ListOrderItemModifiersByOrderItem :many
 SELECT * FROM order_item_modifiers WHERE order_item_id = $1 ORDER BY id;
+
+-- name: ListOrders :many
+SELECT * FROM orders
+WHERE outlet_id = $1
+  AND (sqlc.narg('status')::order_status IS NULL OR status = sqlc.narg('status')::order_status)
+  AND (sqlc.narg('order_type')::order_type IS NULL OR order_type = sqlc.narg('order_type')::order_type)
+  AND (sqlc.narg('start_date')::timestamptz IS NULL OR created_at >= sqlc.narg('start_date')::timestamptz)
+  AND (sqlc.narg('end_date')::timestamptz IS NULL OR created_at < sqlc.narg('end_date')::timestamptz + interval '1 day')
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: UpdateOrderStatus :one
+UPDATE orders SET status = $3,
+    completed_at = CASE WHEN $3 = 'COMPLETED' THEN now() ELSE completed_at END,
+    updated_at = now()
+WHERE id = $1 AND outlet_id = $2 AND status = $4
+RETURNING *;
+
+-- name: CancelOrder :one
+UPDATE orders SET status = 'CANCELLED', updated_at = now()
+WHERE id = $1 AND outlet_id = $2 AND status NOT IN ('COMPLETED', 'CANCELLED')
+RETURNING *;
+
+-- name: ListPaymentsByOrder :many
+SELECT * FROM payments WHERE order_id = $1 ORDER BY processed_at;

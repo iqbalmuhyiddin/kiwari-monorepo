@@ -12,6 +12,48 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const cancelOrder = `-- name: CancelOrder :one
+UPDATE orders SET status = 'CANCELLED', updated_at = now()
+WHERE id = $1 AND outlet_id = $2 AND status NOT IN ('COMPLETED', 'CANCELLED')
+RETURNING id, outlet_id, order_number, customer_id, order_type, status, table_number, notes, subtotal, discount_type, discount_value, discount_amount, tax_amount, total_amount, catering_date, catering_status, catering_dp_amount, delivery_platform, delivery_address, created_by, created_at, updated_at, completed_at
+`
+
+type CancelOrderParams struct {
+	ID       uuid.UUID `json:"id"`
+	OutletID uuid.UUID `json:"outlet_id"`
+}
+
+func (q *Queries) CancelOrder(ctx context.Context, arg CancelOrderParams) (Order, error) {
+	row := q.db.QueryRow(ctx, cancelOrder, arg.ID, arg.OutletID)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.OutletID,
+		&i.OrderNumber,
+		&i.CustomerID,
+		&i.OrderType,
+		&i.Status,
+		&i.TableNumber,
+		&i.Notes,
+		&i.Subtotal,
+		&i.DiscountType,
+		&i.DiscountValue,
+		&i.DiscountAmount,
+		&i.TaxAmount,
+		&i.TotalAmount,
+		&i.CateringDate,
+		&i.CateringStatus,
+		&i.CateringDpAmount,
+		&i.DeliveryPlatform,
+		&i.DeliveryAddress,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
+}
+
 const createOrder = `-- name: CreateOrder :one
 INSERT INTO orders (
     outlet_id, order_number, customer_id, order_type, table_number, notes,
@@ -381,4 +423,163 @@ func (q *Queries) ListOrderItemsByOrder(ctx context.Context, orderID uuid.UUID) 
 		return nil, err
 	}
 	return items, nil
+}
+
+const listOrders = `-- name: ListOrders :many
+SELECT id, outlet_id, order_number, customer_id, order_type, status, table_number, notes, subtotal, discount_type, discount_value, discount_amount, tax_amount, total_amount, catering_date, catering_status, catering_dp_amount, delivery_platform, delivery_address, created_by, created_at, updated_at, completed_at FROM orders
+WHERE outlet_id = $1
+  AND ($4::order_status IS NULL OR status = $4::order_status)
+  AND ($5::order_type IS NULL OR order_type = $5::order_type)
+  AND ($6::timestamptz IS NULL OR created_at >= $6::timestamptz)
+  AND ($7::timestamptz IS NULL OR created_at < $7::timestamptz + interval '1 day')
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListOrdersParams struct {
+	OutletID  uuid.UUID          `json:"outlet_id"`
+	Limit     int32              `json:"limit"`
+	Offset    int32              `json:"offset"`
+	Status    NullOrderStatus    `json:"status"`
+	OrderType NullOrderType      `json:"order_type"`
+	StartDate pgtype.Timestamptz `json:"start_date"`
+	EndDate   pgtype.Timestamptz `json:"end_date"`
+}
+
+func (q *Queries) ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order, error) {
+	rows, err := q.db.Query(ctx, listOrders,
+		arg.OutletID,
+		arg.Limit,
+		arg.Offset,
+		arg.Status,
+		arg.OrderType,
+		arg.StartDate,
+		arg.EndDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Order{}
+	for rows.Next() {
+		var i Order
+		if err := rows.Scan(
+			&i.ID,
+			&i.OutletID,
+			&i.OrderNumber,
+			&i.CustomerID,
+			&i.OrderType,
+			&i.Status,
+			&i.TableNumber,
+			&i.Notes,
+			&i.Subtotal,
+			&i.DiscountType,
+			&i.DiscountValue,
+			&i.DiscountAmount,
+			&i.TaxAmount,
+			&i.TotalAmount,
+			&i.CateringDate,
+			&i.CateringStatus,
+			&i.CateringDpAmount,
+			&i.DeliveryPlatform,
+			&i.DeliveryAddress,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CompletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPaymentsByOrder = `-- name: ListPaymentsByOrder :many
+SELECT id, order_id, payment_method, amount, status, reference_number, amount_received, change_amount, processed_by, processed_at FROM payments WHERE order_id = $1 ORDER BY processed_at
+`
+
+func (q *Queries) ListPaymentsByOrder(ctx context.Context, orderID uuid.UUID) ([]Payment, error) {
+	rows, err := q.db.Query(ctx, listPaymentsByOrder, orderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Payment{}
+	for rows.Next() {
+		var i Payment
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrderID,
+			&i.PaymentMethod,
+			&i.Amount,
+			&i.Status,
+			&i.ReferenceNumber,
+			&i.AmountReceived,
+			&i.ChangeAmount,
+			&i.ProcessedBy,
+			&i.ProcessedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateOrderStatus = `-- name: UpdateOrderStatus :one
+UPDATE orders SET status = $3,
+    completed_at = CASE WHEN $3 = 'COMPLETED' THEN now() ELSE completed_at END,
+    updated_at = now()
+WHERE id = $1 AND outlet_id = $2 AND status = $4
+RETURNING id, outlet_id, order_number, customer_id, order_type, status, table_number, notes, subtotal, discount_type, discount_value, discount_amount, tax_amount, total_amount, catering_date, catering_status, catering_dp_amount, delivery_platform, delivery_address, created_by, created_at, updated_at, completed_at
+`
+
+type UpdateOrderStatusParams struct {
+	ID       uuid.UUID   `json:"id"`
+	OutletID uuid.UUID   `json:"outlet_id"`
+	Status   OrderStatus `json:"status"`
+	Status_2 OrderStatus `json:"status_2"`
+}
+
+func (q *Queries) UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) (Order, error) {
+	row := q.db.QueryRow(ctx, updateOrderStatus,
+		arg.ID,
+		arg.OutletID,
+		arg.Status,
+		arg.Status_2,
+	)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.OutletID,
+		&i.OrderNumber,
+		&i.CustomerID,
+		&i.OrderType,
+		&i.Status,
+		&i.TableNumber,
+		&i.Notes,
+		&i.Subtotal,
+		&i.DiscountType,
+		&i.DiscountValue,
+		&i.DiscountAmount,
+		&i.TaxAmount,
+		&i.TotalAmount,
+		&i.CateringDate,
+		&i.CateringStatus,
+		&i.CateringDpAmount,
+		&i.DeliveryPlatform,
+		&i.DeliveryAddress,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
 }
