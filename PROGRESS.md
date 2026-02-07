@@ -36,20 +36,28 @@ Tracking execution of `2026-02-06-pos-implementation-plan.md`.
 | 3.4: Modifier Groups & Modifiers CRUD | Done | `0e0714e` | 8 endpoints, min/max select constraints. 51 tests |
 | 3.5: Combo Items CRUD | Done | `ad913c2` | 3 endpoints (list, create, hard delete). 25 tests |
 
-### Milestone 4: Go API — Orders & Payments — IN PROGRESS
+### Milestone 4: Go API — Orders & Payments — DONE
 
 | Task | Status | Commit | Notes |
 |------|--------|--------|-------|
 | 4.1: Order Creation (Atomic) | Done | `b6c111b` | POST /orders, service layer, tx retry, price snapshots. 46 tests (18 handler + 28 service) |
 | 4.2: Order Queries & Status Management | Done | `e3587b2` | GET list (filters, pagination), GET detail (nested items/modifiers/payments), PATCH status transitions, DELETE cancel. TOCTOU fix, completed_at on COMPLETED. 32 tests |
 | 4.3: Order Item Modifications | Done | `d06f626` | POST add item, PUT update qty/notes, DELETE remove item, PATCH kitchen status. Tx-wrapped writes, order total recalc. 25 tests |
-| 4.4: Multi-Payment | Pending | | |
+| 4.4: Multi-Payment | Done | `a248215` | POST add payment, GET list payments. CASH/QRIS/TRANSFER, change calculation, overpayment prevention, auto-complete order on full payment. Catering lifecycle: BOOKED→DP_PAID→SETTLED. TOCTOU fix: SELECT FOR NO KEY UPDATE inside tx. 20 tests |
 
-### Milestones 5-10 — NOT STARTED
+### Milestone 5: Go API — CRM, Reports, WebSocket — IN PROGRESS
+
+| Task | Status | Commit | Notes |
+|------|--------|--------|-------|
+| 5.1: Customer CRUD + Stats | Done | `347fb81` | 7 endpoints: list (search), get, create, update, soft-delete, stats (total_spend/avg_ticket/top_items), order history. Unique phone constraint handling (409). Stats scoped by outlet_id. 24 tests |
+| 5.2: Reports Endpoints | Pending | | |
+| 5.3: WebSocket for Live Order Updates | Pending | | |
+
+### Milestones 6-10 — NOT STARTED
 
 ## Test Count
 
-336 tests passing (3 auth + 246 handler + 28 service + 7 middleware)
+380 tests passing (3 auth + 290 handler + 28 service + 7 middleware)
 
 ## Resume Prompt
 
@@ -63,3 +71,4 @@ Read PROGRESS.md and docs/plans/2026-02-06-pos-implementation-plan.md, then cont
 - **2026-02-07**: Milestone 3 tasks 3.1–3.4 completed. Each task went through subagent-driven-development: implement → spec review → code quality review → fix → commit. Task 3.5 (Combo Items) pending.
 - **2026-02-07**: Session 2 — Completed 3.5 (Combo Items) and 4.1 (Order Creation). Milestone 3 now DONE. Milestone 4 started. Task 4.1 introduced first service layer (`service/order.go`) with transaction handling, price snapshots, discount math, and retry-on-conflict for order numbers. Two review cycles caught: missing service tests (added 28), race condition fix, string-matching error classification replaced with sentinel errors.
 - **2026-02-07**: Session 3 — Completed 4.2 (Order Queries & Status) and 4.3 (Order Item Modifications). Each went through full subagent-driven-development cycle. Key review findings fixed: (4.2) TOCTOU race on status transitions → added WHERE status=$current to SQL, completed_at never set → CASE WHEN COMPLETED, inconsistent cancel rules → synced PATCH/DELETE. (4.3) Runtime blocker: updated_at column missing from order_items → removed from SQL, no transaction on AddItem → added TxBeginner to handler, kitchen status on cancelled orders → added status check. 336 tests passing.
+- **2026-02-07**: Session 4 — Completed 4.4 (Multi-Payment) and 5.1 (Customer CRUD + Stats). Milestone 4 now DONE. Milestone 5 started. Key review findings fixed: (4.4) Spec review caught TOCTOU race on payment validation → moved GetOrder+SumPayments inside tx with SELECT FOR NO KEY UPDATE row lock. Code quality approved. (5.1) Both reviewers caught missing GET single customer endpoint → added. Code quality reviewer caught stats queries not scoped by outlet_id → added AND o.outlet_id=$2. Also flagged LIKE wildcard injection and soft-delete vs unique constraint — deferred as schema-level concerns. 380 tests passing.
