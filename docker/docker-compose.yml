@@ -1,0 +1,57 @@
+# docker/docker-compose.yml
+# Production Docker Compose for Kiwari POS
+
+services:
+  pos-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    container_name: pos-api
+    env_file: .env
+    ports:
+      - "127.0.0.1:8081:8081"
+    depends_on:
+      pos-db:
+        condition: service_healthy
+    networks:
+      - pos-internal
+      - proxy
+    restart: unless-stopped
+
+  pos-admin:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.admin
+    container_name: pos-admin
+    environment:
+      - API_URL=http://pos-api:8081
+    ports:
+      - "127.0.0.1:3001:3000"
+    networks:
+      - pos-internal
+      - proxy
+    restart: unless-stopped
+
+  pos-db:
+    image: postgres:16-alpine
+    container_name: pos-db
+    env_file: .env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pos -d pos_db"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - pos-internal
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+
+networks:
+  pos-internal:
+    internal: true
+  proxy:
+    external: true

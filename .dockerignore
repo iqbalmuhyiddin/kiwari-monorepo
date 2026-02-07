@@ -1,0 +1,8 @@
+.git
+.worktrees
+.idea
+.vscode
+android/
+docs/
+*.md
+docker/.env
