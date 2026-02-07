@@ -64,37 +64,49 @@ pos-superpower/
 
 ## 3. Brand Identity & Design Tokens
 
-Aesthetic: **"Vibrant Brand"** — Green & Yellow, energetic and professional.
+Aesthetic: **"Bold + Clean"** — Bright white backgrounds, strong green CTAs, yellow category accents. Light-only (no dark theme — POS terminal doesn't need it).
+
+> Revised 2026-02-07. Full design spec: `docs/plans/2026-02-07-android-theme-redesign.md`
 
 ### Color Palette
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| Primary Green | `#0c7721` | Main actions, success states, primary buttons |
-| Primary Yellow | `#ffd500` | Headers, highlights, accent text |
-| Border Yellow | `#ffea60` | Active card states, subtle borders |
-| Accent Red | `#d43b0a` | Errors, destructive actions, cancel |
-| Dark Grey | `#262626` | Primary text (light mode), background (dark mode) |
-| Surface Grey | `#3a3838` | Card background (dark mode) |
-| Cream Light | `#fffcf2` | Secondary backgrounds (light mode) |
-| White | `#ffffff` | Main background (light mode) |
+| Primary Green | `#0c7721` | CTAs, selected states, checkboxes, primary buttons |
+| Primary Yellow | `#ffd500` | Category chips (selected), header accent |
+| Error Red | `#dc2626` | Error states, destructive actions |
+| Text Primary | `#1a1a1a` | Headings, product names, prices |
+| Text Secondary | `#6b7280` | Subtitles, hints, captions |
+| Border Color | `#e5e7eb` | Card borders, dividers |
+| Surface Color | `#f8f9fa` | Card bg, input bg, avatars |
+| White | `#ffffff` | Backgrounds, on-primary text |
+| Error Bg Tint | `#fef2f2` | Error field background tint |
 
 ### Typography
 
-- **Font**: Inter (Roboto as fallback)
-- Headings: Bold/ExtraBold (700-800)
-- Body: Regular/Medium (400-500)
-- Buttons: Bold (700)
+- **Font**: Roboto (system default, no custom font files)
+- Size range: 11–20sp (tight for POS readability)
+- Headings: Bold (700), 18–20sp
+- Body: Regular (400), 13–15sp
+- Labels: Medium (500), 11–13sp
+
+### Shapes
+
+| Element | Radius |
+|---------|--------|
+| Chips, inputs | 8dp (extraSmall) |
+| Buttons | 10dp (small) |
+| Cards | 12dp (medium) |
+| Bottom sheets | 16dp (large) |
 
 ### Component Styles
 
-- **Buttons**: Rounded corners 12-16px, subtle drop shadow on primary
-- **Cards**: Rounded corners 20px
-- **Active card state**: 2px solid `#ffea60` border + `#fffdf5` background
-- **Light mode checkout**: Dark Grey bg `#262626` with Yellow text `#ffd500`
-- **Dark mode prices**: Yellow `#ffd500` + monospace + bold
-- **Dark mode add button**: Yellow bg with dark text (high contrast)
-- **Light + Dark mode**: Both supported
+- **Buttons**: 10dp rounded corners, green primary, 0.38 alpha disabled
+- **Cards**: 12dp rounded corners, 1dp border (`#e5e7eb`)
+- **Category chips**: Yellow selected, surfaceVariant unselected, 8dp rounded
+- **Avatars**: 56dp, 8dp rounded rect, surfaceVariant background
+- **Elevation**: Bottom bar 4dp shadow, cards 0dp (border-based)
+- **Light-only**: No dark theme
 
 ---
 

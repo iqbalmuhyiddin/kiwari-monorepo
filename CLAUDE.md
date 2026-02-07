@@ -78,15 +78,19 @@ make help               # List all available targets
 - **Catering lifecycle**: `order_type=CATERING` with `catering_status` (BOOKED→DP_PAID→SETTLED). Down payment is the first payment record.
 - **Product customization**: Variant groups (pick one per group) vs Modifier groups (pick many with min/max). Separate concepts, separate tables.
 
-## Brand Design Tokens
+## Brand Design Tokens (Bold + Clean)
 
 ```
-Primary Green:  #0c7721  (actions, success, primary buttons)
-Primary Yellow: #ffd500  (headers, highlights, accents)
-Border Yellow:  #ffea60  (active states, subtle borders)
-Accent Red:     #d43b0a  (errors, destructive actions)
-Dark Grey:      #262626  (text light mode, bg dark mode)
-Font:           Inter (Roboto fallback)
+Primary Green:  #0c7721  (CTAs, selected states, primary buttons)
+Primary Yellow: #ffd500  (category chips selected, header accent)
+Error Red:      #dc2626  (error states, destructive actions)
+Text Primary:   #1a1a1a  (headings, product names, prices)
+Text Secondary: #6b7280  (subtitles, hints, captions)
+Border Color:   #e5e7eb  (card borders, dividers)
+Surface Color:  #f8f9fa  (card bg, input bg, avatars)
+Font:           Roboto (system default)
+Theme:          Light-only (no dark theme)
+Shapes:         8dp chips, 10dp buttons, 12dp cards, 16dp sheets
 ```
 
 ## Deployment
@@ -109,6 +113,11 @@ Production runs on Tencent Cloud VPS at `nasibakarkiwari.com`:
 - Go installed via Homebrew: `/opt/homebrew/bin/go`
 - `sqlc` and `migrate` at `~/go/bin/` — need `export PATH="$HOME/go/bin:$PATH"`
 - All `go` commands run from `api/` subdirectory (that's where `go.mod` lives)
+- **Android SDK**: CLI-only (no Android Studio). JDK 17 via Homebrew, `android-commandlinetools` cask. compileSdk 35, minSdk 26.
+- **Android build**: `cd android && ./gradlew installDebug` (builds + installs to USB-connected device)
+- **Android dev testing**: Physical device via USB. Debug API URL points to Mac LAN IP (check `ipconfig getifaddr en0`). Requires `usesCleartextTraffic=true` for HTTP.
+- **Go API has NO version prefix** — routes are `/auth/login`, `/outlets/{oid}/...`, NOT `/api/v1/...`. Android base URL must be just `http://host:port/`.
+- **Test credentials**: email `admin@kiwari.com` / password `password123` / PIN `1234` / outlet `17fbe5e3-6dea-4a8e-9036-8a59c345e157` (local dev DB only)
 
 ## Reference Documents
 
