@@ -23,9 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kiwari.pos.data.model.Product
-import com.kiwari.pos.ui.theme.PrimaryGreen
-import com.kiwari.pos.ui.theme.PrimaryYellow
-import com.kiwari.pos.ui.theme.White
 import com.kiwari.pos.util.formatPrice
 import java.math.BigDecimal
 
@@ -53,7 +50,7 @@ fun ProductListItem(
             // Letter avatar
             LetterAvatar(
                 letter = product.name.firstOrNull()?.uppercaseChar() ?: '?',
-                modifier = Modifier.size(44.dp)
+                modifier = Modifier.size(56.dp)
             )
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -100,15 +97,15 @@ private fun LetterAvatar(
 ) {
     Box(
         modifier = modifier
-            .clip(CircleShape)
-            .background(PrimaryYellow),
+            .clip(MaterialTheme.shapes.extraSmall)
+            .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = letter.toString(),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSecondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -122,14 +119,14 @@ private fun QuantityBadge(
         modifier = modifier
             .size(32.dp)
             .clip(CircleShape)
-            .background(PrimaryGreen),
+            .background(MaterialTheme.colorScheme.primary),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = quantity.toString(),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
-            color = White
+            color = MaterialTheme.colorScheme.onPrimary
         )
     }
 }

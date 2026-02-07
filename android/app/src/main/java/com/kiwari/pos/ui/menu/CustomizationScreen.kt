@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -43,8 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.kiwari.pos.ui.theme.PrimaryGreen
-import com.kiwari.pos.ui.theme.White
 import com.kiwari.pos.util.formatPrice
 import java.math.BigDecimal
 
@@ -294,7 +291,7 @@ private fun VariantGroupSection(
                     selected = variant.id == selectedVariantId,
                     onClick = { onVariantSelected(variant.id) },
                     colors = RadioButtonDefaults.colors(
-                        selectedColor = PrimaryGreen
+                        selectedColor = MaterialTheme.colorScheme.primary
                     )
                 )
                 Text(
@@ -366,7 +363,7 @@ private fun ModifierGroupSection(
                     },
                     enabled = !atMax || isSelected,
                     colors = CheckboxDefaults.colors(
-                        checkedColor = PrimaryGreen
+                        checkedColor = MaterialTheme.colorScheme.primary
                     )
                 )
                 Text(
@@ -485,12 +482,12 @@ private fun AddToCartButton(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .height(52.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.small,
         colors = ButtonDefaults.buttonColors(
-            containerColor = PrimaryGreen,
-            contentColor = White,
-            disabledContainerColor = PrimaryGreen.copy(alpha = 0.4f),
-            disabledContentColor = White.copy(alpha = 0.6f)
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
+            disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f)
         )
     ) {
         Text(
