@@ -84,7 +84,7 @@ fun ProductListItem(
             }
         }
         HorizontalDivider(
-            modifier = Modifier.padding(start = 72.dp),
+            modifier = Modifier.padding(start = 84.dp),
             color = MaterialTheme.colorScheme.outlineVariant
         )
     }

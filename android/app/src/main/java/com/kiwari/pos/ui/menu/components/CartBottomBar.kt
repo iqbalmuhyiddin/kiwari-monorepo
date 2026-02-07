@@ -29,7 +29,7 @@ fun CartBottomBar(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shadowElevation = 8.dp,
+        shadowElevation = 4.dp,
         color = MaterialTheme.colorScheme.surface
     ) {
         Row(

@@ -33,9 +33,12 @@ fun CategoryChips(
             onClick = { onCategorySelected(null) },
             label = { Text("Semua") },
             colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-            )
+                selectedContainerColor = MaterialTheme.colorScheme.secondary,
+                selectedLabelColor = MaterialTheme.colorScheme.onSecondary,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ),
+            shape = MaterialTheme.shapes.extraSmall
         )
 
         categories.forEach { category ->
@@ -44,9 +47,12 @@ fun CategoryChips(
                 onClick = { onCategorySelected(category.id) },
                 label = { Text(category.name) },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                )
+                    selectedContainerColor = MaterialTheme.colorScheme.secondary,
+                    selectedLabelColor = MaterialTheme.colorScheme.onSecondary,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                shape = MaterialTheme.shapes.extraSmall
             )
         }
     }
