@@ -1,100 +1,56 @@
 package com.kiwari.pos.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 
-private val LightColorScheme = lightColorScheme(
+private val KiwariColorScheme = lightColorScheme(
     primary = PrimaryGreen,
     onPrimary = White,
-    primaryContainer = PrimaryGreen.copy(alpha = 0.1f),
+    primaryContainer = PrimaryGreen.copy(alpha = 0.04f),
     onPrimaryContainer = PrimaryGreen,
 
     secondary = PrimaryYellow,
-    onSecondary = DarkGrey,
-    secondaryContainer = PrimaryYellow.copy(alpha = 0.2f),
-    onSecondaryContainer = DarkGrey,
+    onSecondary = TextPrimary,
+    secondaryContainer = PrimaryYellow.copy(alpha = 0.15f),
+    onSecondaryContainer = TextPrimary,
 
-    tertiary = BorderYellow,
-    onTertiary = DarkGrey,
-    tertiaryContainer = BorderYellow.copy(alpha = 0.2f),
-    onTertiaryContainer = DarkGrey,
-
-    error = AccentRed,
+    error = ErrorRed,
     onError = White,
-    errorContainer = AccentRed.copy(alpha = 0.1f),
-    onErrorContainer = AccentRed,
+    errorContainer = ErrorBgTint,
+    onErrorContainer = ErrorRed,
 
-    background = CreamLight,
-    onBackground = DarkGrey,
+    background = White,
+    onBackground = TextPrimary,
 
     surface = White,
-    onSurface = DarkGrey,
-    surfaceVariant = LightGrey,
-    onSurfaceVariant = DarkGrey.copy(alpha = 0.7f),
+    onSurface = TextPrimary,
+    surfaceVariant = SurfaceColor,
+    onSurfaceVariant = TextSecondary,
 
-    outline = MediumGrey,
-    outlineVariant = MediumGrey.copy(alpha = 0.4f)
+    outline = BorderColor,
+    outlineVariant = BorderColor
 )
 
-private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryGreen,
-    onPrimary = White,
-    primaryContainer = PrimaryGreen.copy(alpha = 0.3f),
-    onPrimaryContainer = PrimaryGreen,
-
-    secondary = PrimaryYellow,
-    onSecondary = DarkGrey,
-    secondaryContainer = PrimaryYellow.copy(alpha = 0.3f),
-    onSecondaryContainer = PrimaryYellow,
-
-    tertiary = BorderYellow,
-    onTertiary = DarkGrey,
-    tertiaryContainer = BorderYellow.copy(alpha = 0.3f),
-    onTertiaryContainer = BorderYellow,
-
-    error = AccentRed,
-    onError = White,
-    errorContainer = AccentRed.copy(alpha = 0.3f),
-    onErrorContainer = AccentRed.copy(alpha = 0.8f),
-
-    background = DarkBackground,
-    onBackground = CreamLight,
-
-    surface = DarkSurface,
-    onSurface = CreamLight,
-    surfaceVariant = SurfaceGrey,
-    onSurfaceVariant = CreamLight.copy(alpha = 0.7f),
-
-    outline = MediumGrey,
-    outlineVariant = MediumGrey.copy(alpha = 0.6f)
+private val KiwariShapes = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),   // chips, inputs
+    small = RoundedCornerShape(10.dp),        // buttons
+    medium = RoundedCornerShape(12.dp),       // cards
+    large = RoundedCornerShape(16.dp),        // bottom sheets
+    extraLarge = RoundedCornerShape(16.dp)    // same as large
 )
 
 @Composable
 fun KiwariTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = KiwariColorScheme,
         typography = KiwariTypography,
+        shapes = KiwariShapes,
         content = content
     )
 }

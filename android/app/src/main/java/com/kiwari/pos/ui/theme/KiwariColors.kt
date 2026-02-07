@@ -2,21 +2,20 @@ package com.kiwari.pos.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Kiwari Brand Colors
-val PrimaryGreen = Color(0xFF0C7721)
-val PrimaryYellow = Color(0xFFFFD500)
-val BorderYellow = Color(0xFFFFEA60)
-val AccentRed = Color(0xFFD43B0A)
-val DarkGrey = Color(0xFF262626)
-val SurfaceGrey = Color(0xFF3A3838)
-val CreamLight = Color(0xFFFFFCF2)
+// ── Bold + Clean Palette ──────────────────────
+// Design spec: docs/plans/2026-02-07-android-theme-redesign.md
 
-// Additional semantic colors for light theme
-val White = Color(0xFFFFFFFF)
-val Black = Color(0xFF000000)
-val LightGrey = Color(0xFFF5F5F5)
-val MediumGrey = Color(0xFF9E9E9E)
+// Brand colors (unchanged)
+val PrimaryGreen = Color(0xFF0C7721)   // CTAs, selected states, checkboxes
+val PrimaryYellow = Color(0xFFFFD500)  // Category chips (selected), header accent
 
-// Additional semantic colors for dark theme
-val DarkBackground = Color(0xFF1A1A1A)
-val DarkSurface = Color(0xFF2D2D2D)
+// Error
+val ErrorRed = Color(0xFFDC2626)       // Error states, destructive actions
+
+// Neutrals
+val TextPrimary = Color(0xFF1A1A1A)    // Headings, product names, prices
+val TextSecondary = Color(0xFF6B7280)  // Subtitles, hints, captions
+val BorderColor = Color(0xFFE5E7EB)    // Card borders, dividers
+val SurfaceColor = Color(0xFFF8F9FA)   // Card bg, input bg, avatars
+val White = Color(0xFFFFFFFF)          // Backgrounds, on-primary text
+val ErrorBgTint = Color(0xFFFEF2F2)    // Error field background tint
