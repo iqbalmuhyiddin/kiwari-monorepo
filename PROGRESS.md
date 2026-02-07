@@ -1,13 +1,13 @@
 # POS Implementation Progress
 
 Tracking execution of the implementation plan (split into three files):
-- `docs/plans/2026-02-06-backend-plan.md` — Go API (M1-7 done), Docker (M7), Deploy (M10)
+- `docs/plans/2026-02-06-backend-plan.md` — Go API (M1-6 done), Docker (M7 done), Deploy (M10)
 - `docs/plans/2026-02-06-android-pos-plan.md` — Android POS (M8) ← PRIORITY
 - `docs/plans/2026-02-06-sveltekit-admin-plan.md` — SvelteKit Admin (M9)
 
 ## Active Branch
 
-`main` (milestone-6 worktree merged and cleaned up)
+`main` (milestone-7 worktree merged and cleaned up)
 
 ## Milestones
 
@@ -63,7 +63,14 @@ Tracking execution of the implementation plan (split into three files):
 | 6.1: Wire Everything Together | Done | `92f4930` | router.go wiring all 11 handler groups into Chi router. Auth middleware on protected routes, RequireOutlet on outlet-scoped, RequireRole("OWNER") on reports. CORS for dev+prod. WebSocket route. main.go with pgxpool, graceful shutdown. Review fix: WriteTimeout 0 for WebSocket compatibility. |
 | 6.2: Integration Tests | Done | `8c5adf6` | End-to-end test with real PostgreSQL via testcontainers-go. Full lifecycle: outlet→user→login→category→product→variants→modifiers→order→multi-payment (CASH+QRIS split)→verify auto-complete→customer stats. Price snapshot assertion (57000.00). Build tag `integration`. Review fixes: split payment verification, price assertion, documentation comments. |
 
-### Milestones 7-10 — NOT STARTED
+### Milestone 7: Docker Production Setup — DONE
+
+| Task | Status | Commit | Notes |
+|------|--------|--------|-------|
+| 7.1: Production Docker Compose | Done | `722dc4d` | Dockerfile.api (golang:1.25-alpine multi-stage, non-root user), Dockerfile.admin (placeholder SvelteKit), docker-compose.yml (3 services, internal network isolation, proxy network for NPM, localhost-only ports). .dockerignore added. .env.example with production vars. Review fixes: Go version match, non-root user, 127.0.0.1 port binding, internal:true network, .dockerignore. |
+| 7.2: Backup Script | Done | `637c7bb` | docker/backup.sh — pg_dump + gzip, 30-day retention. Review fixes: set -o pipefail (prevents silent pg_dump failures in pipe), -s file check (non-empty), cron log redirection. |
+
+### Milestones 8-10 — NOT STARTED
 
 > **Note:** Milestones 8 (Android) and 9 (SvelteKit) have been split into separate plan files.
 > Android is priority. See plan file references at top of this document.
@@ -88,3 +95,4 @@ Read PROGRESS.md and the relevant plan file (backend-plan.md, android-pos-plan.m
 - **2026-02-07**: Session 5 — Merged `feature/milestone-2-auth` worktree into `main` (fast-forward, 15 commits). Worktree and branch cleaned up. Post-merge review of Task 4.4 (Multi-Payment): code quality reviewer caught that COMPLETED orders weren't explicitly blocked from accepting payments (only indirectly via sum check). Fix: added explicit COMPLETED guard + test, also fixed `TestAddPayment_AlreadyFullyPaid` which was silently testing wrong code path after guard addition (changed order status from COMPLETED→NEW). 381 tests passing.
 - **2026-02-07**: Session 6 — Completed 5.2 (Reports) and 5.3 (WebSocket). Milestone 5 now DONE. Used worktree `feature/milestone-5-crm-reports-ws`, merged to main (fast-forward, 2 commits). Key review findings fixed: (5.2) Timezone mismatch — `time.Parse` produces UTC but orders are Asia/Jakarta, early morning orders missed → fixed with `time.ParseInLocation("2006-01-02", s, jakartaLoc)`. Untyped sqlc params from `$3 + interval '1 day'` → moved end-of-day to Go. Test package `handler` → `handler_test`. Added date range validation. (5.3) Misleading mutex in broadcast → changed to single write lock covering entire broadcast body. 401 tests passing.
 - **2026-02-07**: Session 7 — Completed 6.1 (Router Assembly) and 6.2 (Integration Tests). Milestone 6 now DONE. Used worktree `feature/milestone-6-router-integration`, merged to main (fast-forward, 2 commits). Key review findings: (6.1) Spec reviewer confirmed all 11 handler groups wired correctly with proper middleware ordering. Code quality caught WriteTimeout:15s killing WebSocket connections → fixed to WriteTimeout:0 (WS pumps manage own deadlines). (6.2) Spec reviewer caught single-payment-as-multi and missing price assertion → fixed: split CASH+QRIS with partial payment verification, explicit total_amount==57000.00 assertion. Code quality approved with documentation additions (hub leak note, migration path comment, raw SQL justification). 401 unit tests + 1 integration test.
+- **2026-02-07**: Session 8 — Completed 7.1 (Production Docker Compose) and 7.2 (Backup Script). Milestone 7 now DONE. Used worktree `feature/milestone-7-docker`, merged to main (fast-forward, 2 commits). Key review findings: (7.1) Spec reviewer caught missing `internal: true` on pos-internal network → fixed. Code quality caught: Go version mismatch (golang:1.22 vs go.mod 1.25.7) → updated to golang:1.25-alpine, missing .dockerignore → added, no non-root user → added `app` user in both Dockerfiles, host port exposure → prefixed with 127.0.0.1 (NPM handles public traffic via proxy network), Alpine 3.19 EOL → updated to 3.21. (7.2) Code quality caught silent pg_dump failure in pipe (set -e doesn't catch left side of pipe) → added set -o pipefail, file check -f → -s (non-empty), cron example missing log redirect → added. Backend complete through M7. Next: Android POS (M8, priority).
