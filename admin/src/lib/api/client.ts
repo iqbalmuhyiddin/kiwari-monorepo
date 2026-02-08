@@ -2,15 +2,15 @@
  * API client for the Kiwari POS Go backend.
  *
  * Routes have NO version prefix — e.g. /auth/login, /outlets/{oid}/products.
- * Base URL is configured via environment variable.
+ *
+ * For authenticated requests in the admin panel, API calls should go through
+ * SvelteKit server-side load functions and form actions (which use
+ * $lib/server/api.ts). This client-side module can be used for any
+ * unauthenticated calls or future client-side needs, but tokens are NOT
+ * accessible from JavaScript (httpOnly cookies).
  */
 
-import { browser } from '$app/environment';
-import { auth } from '$lib/stores/auth';
-
-const API_BASE_URL = browser
-	? (import.meta.env.VITE_API_URL ?? 'http://localhost:8081')
-	: (import.meta.env.VITE_API_URL ?? 'http://localhost:8081');
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8081';
 
 export interface ApiError {
 	status: number;
@@ -28,8 +28,8 @@ export class ApiClientError extends Error {
 }
 
 /**
- * Typed fetch wrapper. Automatically handles JSON serialization,
- * auth headers, and error responses.
+ * Typed fetch wrapper. Automatically handles JSON serialization
+ * and error responses.
  */
 async function request<T>(
 	path: string,
@@ -44,11 +44,6 @@ async function request<T>(
 	// Set Content-Type only when body exists
 	if (options.body) {
 		headers['Content-Type'] = 'application/json';
-	}
-
-	// Attach auth token if available
-	if (browser && auth.token) {
-		headers['Authorization'] = `Bearer ${auth.token}`;
 	}
 
 	const response = await fetch(url, {

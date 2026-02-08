@@ -1,11 +1,17 @@
 <script lang="ts">
 	import Sidebar from '$lib/components/Sidebar.svelte';
+	import { auth } from '$lib/stores/auth';
 
-	let { children } = $props();
+	let { data, children } = $props();
+
+	// Sync server-provided user data to client-side auth store (reactive)
+	$effect(() => {
+		auth.setUser(data.user);
+	});
 </script>
 
 <div class="app-shell">
-	<Sidebar />
+	<Sidebar user={data.user} />
 	<main class="app-content">
 		{@render children()}
 	</main>

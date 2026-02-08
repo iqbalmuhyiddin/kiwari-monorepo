@@ -1,74 +1,33 @@
 /**
- * Auth store — manages user session state (token + user info).
+ * Auth store — client-side reactive user state.
  *
- * Uses Svelte 5 runes ($state) for reactivity.
- * Token is persisted to localStorage on the client side.
+ * Tokens are stored as httpOnly cookies (set by the server).
+ * This store only holds the user object for client-side components
+ * (sidebar, role checks, etc.). It is populated from page data
+ * returned by the (app) layout server load.
+ *
+ * No localStorage. No token access from JavaScript.
  */
 
-import { browser } from '$app/environment';
+import type { SessionUser } from '$lib/types/api';
 
-export interface User {
-	id: string;
-	email: string;
-	name: string;
-	role: string;
-	outlet_id: string;
-}
-
-interface AuthState {
-	token: string | null;
-	user: User | null;
-}
+// Re-export SessionUser as User for convenience
+export type { SessionUser as User } from '$lib/types/api';
 
 function createAuthStore() {
-	let state = $state<AuthState>({
-		token: null,
-		user: null
-	});
-
-	// Hydrate from localStorage on init
-	if (browser) {
-		const savedToken = localStorage.getItem('auth_token');
-		const savedUser = localStorage.getItem('auth_user');
-		if (savedToken && savedUser) {
-			try {
-				state.token = savedToken;
-				state.user = JSON.parse(savedUser);
-			} catch {
-				// Corrupted stored data — clear it
-				localStorage.removeItem('auth_token');
-				localStorage.removeItem('auth_user');
-			}
-		}
-	}
+	let user = $state<SessionUser | null>(null);
 
 	return {
-		get token() {
-			return state.token;
-		},
 		get user() {
-			return state.user;
+			return user;
 		},
 		get isAuthenticated() {
-			return state.token !== null;
+			return user !== null;
 		},
 
-		login(token: string, user: User) {
-			state.token = token;
-			state.user = user;
-			if (browser) {
-				localStorage.setItem('auth_token', token);
-				localStorage.setItem('auth_user', JSON.stringify(user));
-			}
-		},
-
-		logout() {
-			state.token = null;
-			state.user = null;
-			if (browser) {
-				localStorage.removeItem('auth_token');
-				localStorage.removeItem('auth_user');
-			}
+		/** Called from the (app) layout to sync server-provided user data */
+		setUser(newUser: SessionUser | null) {
+			user = newUser;
 		}
 	};
 }
