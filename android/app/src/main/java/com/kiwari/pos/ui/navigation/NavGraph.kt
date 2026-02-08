@@ -23,7 +23,11 @@ import com.kiwari.pos.ui.settings.PrinterSettingsScreen
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Menu : Screen("menu")
-    object Cart : Screen("cart")
+    object Cart : Screen("cart?editOrderId={editOrderId}") {
+        fun createRoute(editOrderId: String? = null): String {
+            return if (editOrderId != null) "cart?editOrderId=$editOrderId" else "cart"
+        }
+    }
     object Payment : Screen("payment")
     object Catering : Screen("catering")
     object Customization : Screen("customization/{productId}") {
@@ -71,7 +75,7 @@ fun NavGraph(
         composable(Screen.Menu.route) {
             MenuScreen(
                 onNavigateToCart = {
-                    navController.navigate(Screen.Cart.route)
+                    navController.navigate(Screen.Cart.createRoute())
                 },
                 onNavigateToCustomization = { productId ->
                     navController.navigate(Screen.Customization.createRoute(productId))
@@ -82,7 +86,14 @@ fun NavGraph(
             )
         }
 
-        composable(Screen.Cart.route) {
+        composable(
+            route = Screen.Cart.route,
+            arguments = listOf(navArgument("editOrderId") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            })
+        ) {
             CartScreen(
                 onNavigateBack = {
                     navController.popBackStack()
@@ -158,7 +169,9 @@ fun NavGraph(
                     // TODO: navigate to payment for existing order
                 },
                 onEdit = { orderId ->
-                    // TODO: navigate to edit order
+                    navController.navigate(Screen.Cart.createRoute(editOrderId = orderId)) {
+                        popUpTo(Screen.Menu.route)
+                    }
                 }
             )
         }
