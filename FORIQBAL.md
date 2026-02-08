@@ -168,11 +168,13 @@ SvelteKit 2 + Svelte 5 + Tailwind CSS v4. Server-side rendered with client-side 
 
 **Dashboard** (Task 9.3): Four KPI cards (revenue, orders, avg ticket, payment method breakdown) + pure CSS hourly sales bar chart (hours 6-22) + live active orders panel that polls every 10 seconds through a SvelteKit server endpoint. All data loaded server-side in parallel via `Promise.all` in `+page.server.ts`. Orders fetched with two parallel calls (one for NEW, one for PREPARING) because the Go API's status filter only accepts one value at a time.
 
+**Menu Management** (Task 9.4): Full CRUD for the entire menu structure. Category tabs at the top with an inline "Kelola Kategori" panel for add/edit/delete. Product grid with search and category filtering. Product detail page with sections for basic info (name, price, category, station, prep time, is_combo, is_active toggle), variant group editor (collapsible groups with inline variant CRUD and price adjustment display), modifier group editor (collapsible groups with min/max rules), and combo items editor (product dropdown with add/remove). 16 SvelteKit form actions in the product detail server file — verbose but follows the colocated-actions convention.
+
+**Orders** (Task 9.5): Order list with tab bar (All Orders / Catering), filter bar (status, type, date range, search by order number), and offset-based pagination. Catering tab shows card layout with DP amount, remaining balance, and upcoming date highlighting. Click any order → slide-in detail panel from the right showing items with product names, variant/modifier info, payment breakdown with method badges (CASH/QRIS/TRANSFER), order summary, and status action buttons for valid transitions. Includes a visual OrderTimeline (4-step: Baru→Diproses→Siap→Selesai) with green checkmarks and a glow effect on the active step. A proxy endpoint enriches order items with product names and customer info (the Go API only returns IDs, so the SvelteKit server resolves them).
+
 **Sidebar**: Navigation with role-based visibility — CASHIER and KITCHEN roles don't see Reports or Settings links. User info footer with initials avatar, name, and role.
 
 ### What's pending
-- Menu management (CRUD for categories, products, variants, modifiers)
-- Order list with filters and detail modals
 - Customer CRM (search, stats, order history)
 - Reports with charts and CSV export
 - Settings (tax, receipt template, user management)
@@ -277,7 +279,7 @@ Each worktree is a fully independent checkout. You can have the API running from
 | 6 | Router assembly & integration test | Done | Full lifecycle test with real PostgreSQL |
 | 7 | Docker production setup | Done | Compose files, Dockerfiles, backup script |
 | 8 | Android POS app | Done | 8 screens + theme redesign. 100 files, 10,384 lines. |
-| 9 | SvelteKit admin panel | ~38% | Scaffold, auth, dashboard done. 5 pages pending (menu, orders, CRM, reports, settings). |
+| 9 | SvelteKit admin panel | ~63% | Scaffold, auth, dashboard, menu management, orders done. 3 pages pending (CRM, reports, settings). |
 | 10 | Deployment & seed script | Done | CI/CD pipeline, VPS deploy, seed script. v1.0.0 deployed. |
 
 **Backend + Android + CI/CD are complete.** The admin panel (M9) is the final milestone.
@@ -309,6 +311,9 @@ The Go API's JWT access token only contains `user_id`, `outlet_id`, `role`, `exp
 
 ### Go API list responses are wrapped
 Order list endpoints return `{orders: [...], limit, offset}` — not a bare array. Every SvelteKit page consuming list endpoints needs to unwrap. If you forget, things silently break (an object isn't iterable).
+
+### Go API returns IDs, not names on order items
+The order detail endpoint returns `product_id`, `variant_id`, `modifier_id` — but NOT `product_name`, `variant_name`, or `modifier_name`. The Go API was built write-optimized (price snapshots at order time), but the read path doesn't JOIN to resolve human-readable names. The admin works around this with a SvelteKit proxy endpoint (`/api/orders/[id]`) that fetches the order AND the products list in parallel, then enriches items with product names before returning to the client. Same pattern for customer info. This is a pragmatic fix but the real solution is adding JOINs to the Go API's order detail query. Until then, variant and modifier names show generic labels.
 
 ### Go query params: one value per key
 `r.URL.Query().Get("key")` returns only the first value. `?status=NEW&status=PREPARING` won't give you both — only `NEW`. To filter by multiple statuses, make separate API calls and merge results client-side.

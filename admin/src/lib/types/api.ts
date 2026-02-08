@@ -49,7 +49,7 @@ export interface PaymentSummary {
 	total_amount: string;
 }
 
-export interface OrderItem {
+export interface ActiveOrderItem {
 	id: string;
 	product_name: string;
 	quantity: number;
@@ -64,7 +64,7 @@ export interface ActiveOrder {
 	status: string;
 	total_amount: string;
 	created_at: string;
-	items: OrderItem[];
+	items: ActiveOrderItem[];
 }
 
 export interface OrderListResponse {
@@ -148,4 +148,85 @@ export interface ComboItem {
 	product_id: string;
 	quantity: number;
 	sort_order: number;
+}
+
+// ── Orders types ────────────────────
+
+export type OrderStatus = 'NEW' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';
+export type OrderType = 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY' | 'CATERING';
+export type PaymentMethod = 'CASH' | 'QRIS' | 'TRANSFER';
+export type KitchenStatus = 'PENDING' | 'PREPARING' | 'READY';
+
+export interface Order {
+	id: string;
+	outlet_id: string;
+	order_number: string;
+	customer_id: string | null;
+	customer_name?: string;
+	customer_phone?: string;
+	order_type: OrderType;
+	status: OrderStatus;
+	table_number: string | null;
+	notes: string | null;
+	subtotal: string;
+	discount_type: 'PERCENTAGE' | 'FIXED_AMOUNT' | null;
+	discount_value: string | null;
+	discount_amount: string;
+	tax_amount: string;
+	total_amount: string;
+	catering_date: string | null;
+	catering_status: 'BOOKED' | 'DP_PAID' | 'SETTLED' | null;
+	catering_dp_amount: string | null;
+	delivery_platform: 'GOJEK' | 'GRAB' | 'INTERNAL' | null;
+	delivery_address: string | null;
+	created_by: string;
+	created_at: string;
+	updated_at: string;
+	items?: OrderItem[];
+	payments?: Payment[];
+}
+
+export interface OrderItem {
+	id: string;
+	product_id: string;
+	product_name?: string;
+	variant_id: string | null;
+	variant_name?: string;
+	quantity: number;
+	unit_price: string;
+	discount_type: 'PERCENTAGE' | 'FIXED_AMOUNT' | null;
+	discount_value: string | null;
+	discount_amount: string;
+	subtotal: string;
+	notes: string | null;
+	status: KitchenStatus;
+	station: Station | null;
+	modifiers?: OrderItemModifier[];
+}
+
+export interface OrderItemModifier {
+	id: string;
+	modifier_id: string;
+	modifier_name?: string;
+	quantity: number;
+	unit_price: string;
+}
+
+export interface Payment {
+	id: string;
+	order_id: string;
+	payment_method: PaymentMethod;
+	amount: string;
+	status: string;
+	reference_number: string | null;
+	amount_received: string | null;
+	change_amount: string | null;
+	processed_by: string;
+	processed_at: string;
+}
+
+export interface FullOrderListResponse {
+	orders: Order[];
+	limit: number;
+	offset: number;
 }
