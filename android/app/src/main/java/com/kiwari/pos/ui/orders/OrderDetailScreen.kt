@@ -37,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -132,11 +133,12 @@ fun OrderDetailScreen(
                         )
 
                         // Section 7: Action row (print/share)
+                        val context = LocalContext.current
                         ActionRow(
                             isPaid = isPaid,
                             onPrintKitchen = viewModel::printKitchenTicket,
                             onPrintBill = viewModel::printBill,
-                            onShare = viewModel::shareReceipt
+                            onShare = { viewModel.shareReceipt(context) }
                         )
 
                         // Section 8: Bottom buttons (unpaid only)

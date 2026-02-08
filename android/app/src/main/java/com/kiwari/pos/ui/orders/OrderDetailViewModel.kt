@@ -1,11 +1,17 @@
 package com.kiwari.pos.ui.orders
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kiwari.pos.data.model.OrderDetailResponse
 import com.kiwari.pos.data.model.Result
 import com.kiwari.pos.data.repository.OrderRepository
+import com.kiwari.pos.util.printer.EscPosCommands
+import com.kiwari.pos.util.printer.PrinterService
+import com.kiwari.pos.util.printer.ReceiptFormatter
+import com.kiwari.pos.util.share.ReceiptImageGenerator
+import com.kiwari.pos.util.share.ShareHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +34,8 @@ data class OrderDetailUiState(
 @HiltViewModel
 class OrderDetailViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
+    private val printerService: PrinterService,
+    private val receiptImageGenerator: ReceiptImageGenerator,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -93,7 +101,43 @@ class OrderDetailViewModel @Inject constructor(
         }
     }
 
-    fun printKitchenTicket() { /* TODO: Task 9 */ }
-    fun printBill() { /* TODO: Task 9 */ }
-    fun shareReceipt() { /* TODO: Task 9 */ }
+    fun printKitchenTicket() {
+        val order = _uiState.value.order ?: return
+        viewModelScope.launch {
+            printerService.printKitchenTicketFromOrder(order)
+        }
+    }
+
+    fun printBill() {
+        val order = _uiState.value.order ?: return
+        viewModelScope.launch {
+            if (_uiState.value.isPaid) {
+                printerService.printReceiptFromOrder(order)
+            } else {
+                printerService.printBillFromOrder(order)
+            }
+        }
+    }
+
+    fun shareReceipt(context: Context) {
+        val order = _uiState.value.order ?: return
+        viewModelScope.launch {
+            val prefs = printerService.getPreferences()
+            val outletName = prefs.outletName
+            val charWidth = if (prefs.paperWidth == EscPosCommands.WIDTH_80MM) {
+                EscPosCommands.WIDTH_80MM
+            } else {
+                EscPosCommands.WIDTH_58MM
+            }
+
+            val text = if (_uiState.value.isPaid) {
+                ReceiptFormatter.formatReceiptText(order, outletName, charWidth)
+            } else {
+                ReceiptFormatter.formatBillText(order, outletName, charWidth)
+            }
+
+            val file = receiptImageGenerator.generateImage(text, context)
+            ShareHelper.shareImage(context, file, "Receipt ${order.orderNumber}")
+        }
+    }
 }

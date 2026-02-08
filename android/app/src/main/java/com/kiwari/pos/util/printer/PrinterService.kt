@@ -1,6 +1,8 @@
 package com.kiwari.pos.util.printer
 
 import android.util.Log
+import com.kiwari.pos.data.model.OrderDetailResponse
+import com.kiwari.pos.data.repository.PrinterPreferences
 import com.kiwari.pos.data.repository.PrinterPreferencesRepository
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -105,6 +107,75 @@ class PrinterService @Inject constructor(
             false
         }
     }
+
+    /**
+     * Print a bill (unpaid order) from API order detail.
+     * Does not check auto-print — always prints if printer is configured.
+     */
+    suspend fun printBillFromOrder(order: OrderDetailResponse) {
+        try {
+            val prefs = printerPrefs.preferences.first()
+            if (prefs.printerAddress.isBlank()) {
+                Log.d(TAG, "No printer configured — skipping")
+                return
+            }
+            if (!ensureConnected(prefs.printerAddress)) return
+            val bytes = ReceiptFormatter.formatBill(order, prefs.outletName, prefs.paperWidth)
+            val success = printerManager.send(bytes)
+            if (!success) {
+                Log.e(TAG, "Failed to send bill data")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error printing bill: ${e.message}")
+        }
+    }
+
+    /**
+     * Print a receipt (paid order) from API order detail.
+     * Does not check auto-print — always prints if printer is configured.
+     */
+    suspend fun printReceiptFromOrder(order: OrderDetailResponse) {
+        try {
+            val prefs = printerPrefs.preferences.first()
+            if (prefs.printerAddress.isBlank()) {
+                Log.d(TAG, "No printer configured — skipping")
+                return
+            }
+            if (!ensureConnected(prefs.printerAddress)) return
+            val bytes = ReceiptFormatter.formatReceipt(order, prefs.outletName, prefs.paperWidth)
+            val success = printerManager.send(bytes)
+            if (!success) {
+                Log.e(TAG, "Failed to send receipt data")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error printing receipt: ${e.message}")
+        }
+    }
+
+    /**
+     * Print a kitchen ticket from API order detail.
+     * Does not check auto-print — always prints if printer is configured.
+     */
+    suspend fun printKitchenTicketFromOrder(order: OrderDetailResponse) {
+        try {
+            val prefs = printerPrefs.preferences.first()
+            if (prefs.printerAddress.isBlank()) {
+                Log.d(TAG, "No printer configured — skipping")
+                return
+            }
+            if (!ensureConnected(prefs.printerAddress)) return
+            val bytes = ReceiptFormatter.formatKitchenTicket(order, prefs.paperWidth)
+            val success = printerManager.send(bytes)
+            if (!success) {
+                Log.e(TAG, "Failed to send kitchen ticket data")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error printing kitchen ticket: ${e.message}")
+        }
+    }
+
+    /** Expose preferences for use by ViewModels (e.g., for shareReceipt). */
+    suspend fun getPreferences(): PrinterPreferences = printerPrefs.preferences.first()
 
     private suspend fun ensureConnected(address: String): Boolean {
         if (printerManager.isConnected()) return true
