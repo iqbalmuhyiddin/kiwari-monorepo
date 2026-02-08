@@ -22,9 +22,8 @@ db-reset:                      ## Drop and recreate all tables
 	migrate -path api/migrations -database "$${DATABASE_URL}" drop -f
 	migrate -path api/migrations -database "$${DATABASE_URL}" up
 
-db-seed:                       ## Load example data for dev/demo
-	docker compose -f docker/docker-compose.dev.yml cp api/seed/seed.sql postgres:/tmp/seed.sql
-	docker compose -f docker/docker-compose.dev.yml exec -T postgres psql -U pos -d pos_db -f /tmp/seed.sql
+db-seed:                       ## Seed initial data (outlet + owner)
+	cd api && go run ./cmd/seed
 
 # ── Go API ────────────────────────────────
 api-run:                       ## Run API server
