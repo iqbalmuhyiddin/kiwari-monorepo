@@ -1,0 +1,62 @@
+name: Promote to Production
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  promote-images:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Promote API image
+        run: |
+          docker pull ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-api:staging
+          docker tag ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-api:staging ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-api:${{ github.ref_name }}
+          docker tag ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-api:staging ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-api:latest
+          docker push ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-api:${{ github.ref_name }}
+          docker push ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-api:latest
+
+      - name: Promote Admin image
+        run: |
+          docker pull ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-admin:staging
+          docker tag ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-admin:staging ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-admin:${{ github.ref_name }}
+          docker tag ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-admin:staging ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-admin:latest
+          docker push ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-admin:${{ github.ref_name }}
+          docker push ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-admin:latest
+
+  deploy-production:
+    needs: promote-images
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy to production
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u iqbalmuhyiddin --password-stdin
+            cd ~/docker/pos-production
+            docker compose pull
+            docker compose up -d
+
+      - name: Health check
+        run: |
+          sleep 10
+          curl -f --retry 3 --retry-delay 5 https://api.nasibakarkiwari.com/health
+          curl -f --retry 3 --retry-delay 5 https://admin.nasibakarkiwari.com/
