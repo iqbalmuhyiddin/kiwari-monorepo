@@ -39,3 +39,8 @@ docker/data/
 .env
 !.env.example
 !docker/.env.example
+
+# ── Deploy ────────────────────────
+deploy/*/.env
+!deploy/*/.env.example
+deploy/postgres/init/*.env
