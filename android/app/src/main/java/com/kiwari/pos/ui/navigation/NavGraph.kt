@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.kiwari.pos.data.repository.TokenRepository
+import com.kiwari.pos.ui.cart.CartScreen
 import com.kiwari.pos.ui.login.LoginScreen
 import com.kiwari.pos.ui.menu.CustomizationScreen
 import com.kiwari.pos.ui.menu.MenuScreen
@@ -23,6 +24,7 @@ sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Menu : Screen("menu")
     object Cart : Screen("cart")
+    object Payment : Screen("payment")
     object Customization : Screen("customization/{productId}") {
         fun createRoute(productId: String) = "customization/$productId"
     }
@@ -73,6 +75,17 @@ fun NavGraph(
         }
 
         composable(Screen.Cart.route) {
+            CartScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToPayment = {
+                    navController.navigate(Screen.Payment.route)
+                }
+            )
+        }
+
+        composable(Screen.Payment.route) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Coming soon")
             }
