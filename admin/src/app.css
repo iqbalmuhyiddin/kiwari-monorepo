@@ -1,0 +1,139 @@
+@import 'tailwindcss';
+
+/*
+ * Kiwari POS — Bold + Clean Design Tokens
+ * All design tokens defined as CSS custom properties
+ * and registered with Tailwind via @theme.
+ */
+
+@theme {
+	/* ── Colors ────────────────────────────────── */
+	--color-primary: #0c7721;
+	--color-primary-pressed: #0a6519;
+	--color-accent: #ffd500;
+	--color-error: #dc2626;
+	--color-error-bg: #fef2f2;
+	--color-text-primary: #1a1a1a;
+	--color-text-secondary: #6b7280;
+	--color-border: #e5e7eb;
+	--color-surface: #f8f9fa;
+	--color-bg: #ffffff;
+
+	/* ── Typography ────────────────────────────── */
+	--font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+
+	--text-heading: 1.25rem;
+	--text-heading--line-height: 1.4;
+	--text-heading--font-weight: 700;
+
+	--text-title: 0.9375rem;
+	--text-title--line-height: 1.4;
+	--text-title--font-weight: 600;
+
+	--text-price: 0.9375rem;
+	--text-price--line-height: 1.4;
+	--text-price--font-weight: 700;
+
+	--text-body: 0.8125rem;
+	--text-body--line-height: 1.5;
+	--text-body--font-weight: 400;
+
+	--text-label: 0.6875rem;
+	--text-label--line-height: 1.4;
+	--text-label--font-weight: 500;
+	--text-label--letter-spacing: 0.02em;
+
+	/* ── Border Radius (Shapes) ────────────────── */
+	--radius-chip: 8px;
+	--radius-btn: 10px;
+	--radius-card: 12px;
+	--radius-sheet: 16px;
+
+	/* ── Spacing (8px grid) ────────────────────── */
+	--spacing-1: 4px;
+	--spacing-2: 8px;
+	--spacing-3: 12px;
+	--spacing-4: 16px;
+	--spacing-6: 24px;
+	--spacing-8: 32px;
+}
+
+/* ── Base Styles ──────────────────────────────── */
+
+html {
+	font-family: var(--font-sans);
+	color: var(--color-text-primary);
+	background-color: var(--color-bg);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+body {
+	margin: 0;
+	min-height: 100vh;
+}
+
+/* ── Component Utility Classes ────────────────── */
+
+.btn-primary {
+	background-color: var(--color-primary);
+	color: white;
+	border-radius: var(--radius-btn);
+	font-weight: 600;
+	transition: background-color 0.15s ease;
+
+	&:hover {
+		background-color: var(--color-primary-pressed);
+	}
+
+	&:active {
+		background-color: var(--color-primary-pressed);
+	}
+
+	&:disabled {
+		opacity: 0.38;
+		cursor: not-allowed;
+	}
+}
+
+.btn-secondary {
+	background-color: transparent;
+	color: var(--color-text-primary);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-btn);
+	font-weight: 600;
+	transition: background-color 0.15s ease;
+
+	&:hover {
+		background-color: var(--color-surface);
+	}
+
+	&:active {
+		background-color: var(--color-surface);
+	}
+}
+
+.input-field {
+	background-color: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-chip);
+	padding: 10px 12px;
+	font-size: var(--text-body);
+	line-height: var(--text-body--line-height);
+	transition:
+		border-color 0.15s ease,
+		background-color 0.15s ease;
+
+	&:focus {
+		outline: none;
+		background-color: var(--color-bg);
+		border: 2px solid var(--color-primary);
+		padding: 9px 11px; /* Compensate for 2px border */
+	}
+
+	&.error {
+		background-color: var(--color-error-bg);
+		border: 2px solid var(--color-error);
+		padding: 9px 11px;
+	}
+}
