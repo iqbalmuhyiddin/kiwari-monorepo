@@ -1,0 +1,20 @@
+services:
+  pos-api-staging:
+    image: ghcr.io/iqbalmuhyiddin/kiwari-api:staging
+    container_name: pos-api-staging
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - proxy
+
+  pos-admin-staging:
+    image: ghcr.io/iqbalmuhyiddin/kiwari-admin:staging
+    container_name: pos-admin-staging
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true

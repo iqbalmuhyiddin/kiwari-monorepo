@@ -1,0 +1,20 @@
+services:
+  pos-api:
+    image: ghcr.io/iqbalmuhyiddin/kiwari-api:latest
+    container_name: pos-api
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - proxy
+
+  pos-admin:
+    image: ghcr.io/iqbalmuhyiddin/kiwari-admin:latest
+    container_name: pos-admin
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
