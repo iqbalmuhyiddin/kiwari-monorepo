@@ -1,13 +1,16 @@
 # POS Implementation Progress
 
 Tracking execution of the implementation plan (split into three files):
-- `docs/plans/2026-02-06-backend-plan.md` — Go API (M1-6 done), Docker (M7 done), Deploy (M10)
-- `docs/plans/2026-02-06-android-pos-plan.md` — Android POS (M8) ← PRIORITY
-- `docs/plans/2026-02-06-sveltekit-admin-plan.md` — SvelteKit Admin (M9)
+- `docs/plans/2026-02-06-backend-plan.md` — Go API (M1-6 done), Docker (M7 done), Deploy (M10 done)
+- `docs/plans/2026-02-06-android-pos-plan.md` — Android POS (M8 done)
+- `docs/plans/2026-02-06-sveltekit-admin-plan.md` — SvelteKit Admin (M9 done)
+- `docs/plans/2026-02-08-cicd-design.md` — CI/CD design doc
+- `docs/plans/2026-02-08-cicd-plan.md` — CI/CD implementation plan
+- `docs/plans/2026-02-08-android-order-flow-plan.md` — Android Order Flow (in progress)
 
 ## Active Branch
 
-`feature/milestone-9-sveltekit-admin` in `.worktrees/milestone-9-sveltekit-admin/` (4 commits ahead of main)
+`feature/android-order-flow` — Worktree at `.worktrees/android-order-flow`. 4 commits ahead of main.
 
 ## Milestones
 
@@ -70,7 +73,7 @@ Tracking execution of the implementation plan (split into three files):
 | 7.1: Production Docker Compose | Done | `722dc4d` | Dockerfile.api (golang:1.25-alpine multi-stage, non-root user), Dockerfile.admin (placeholder SvelteKit), docker-compose.yml (3 services, internal network isolation, proxy network for NPM, localhost-only ports). .dockerignore added. .env.example with production vars. Review fixes: Go version match, non-root user, 127.0.0.1 port binding, internal:true network, .dockerignore. |
 | 7.2: Backup Script | Done | `637c7bb` | docker/backup.sh — pg_dump + gzip, 30-day retention. Review fixes: set -o pipefail (prevents silent pg_dump failures in pipe), -s file check (non-empty), cron log redirection. |
 
-### Milestone 8: Android POS App — IN PROGRESS
+### Milestone 8: Android POS App — DONE
 
 | Task | Status | Commit | Notes |
 |------|--------|--------|-------|
@@ -78,30 +81,85 @@ Tracking execution of the implementation plan (split into three files):
 | 8.2: Login Screen | Done | `e29d6be` | AuthApi (3 endpoints), LoginScreen (email+PIN modes), LoginViewModel, AuthRepository with safeApiCall helper, TokenRepository (EncryptedSharedPreferences), AuthInterceptor (Bearer header), TokenAuthenticator (auto-refresh on 401 with dual OkHttpClient), NavGraph with auth-state routing. Review fixes: @Named("auth") DI qualifier, logout→login navigation, UserRole UNKNOWN fallback, innerPadding passthrough, clearError after snackbar, security-crypto stable 1.0.0, credential clearing. Build fixes: removed `/api/v1/` prefix from base URL (Go API has no version prefix), added `usesCleartextTraffic=true` for local HTTP dev. **Tested on real device — login works.** |
 | 8.3: Menu Screen | Done | `9625dc8` | 15 new files, 3 modified. MenuApi (6 endpoints), MenuRepository, CartRepository (shared singleton), CategoryChips, ProductListItem (letter avatar, qty badge, tap+long-press), CartBottomBar, QuickEditPopup, MenuViewModel (parallel data loading, category/search filtering). Shared ApiHelper extracted (DRY), CurrencyFormatter utility. Spec review fixes: nullable preparationTime/maxSelect, placeholder NavGraph routes. Code quality fixes: trailing slashes, parallel loadVariantInfo, pre-computed filteredProducts, cached NumberFormat. |
 | 8.4: Product Customization Bottom Sheet | Done | `417f70d` | 3 new files, 4 modified. CustomizationScreen (full-screen, radio variants, checkbox modifiers with min/max enforcement, qty selector, notes, price calc), CustomizationViewModel (parallel variant+modifier loading, real-time BigDecimal price), SelectedProductRepository (@Volatile bridge). Refactored CartItem.selectedVariant→selectedVariants (List) to support multi-variant-group products. Spec review fix: multi-variant bug (only first group stored). Code quality fixes: retry() after product cleared, filter empty variant/modifier groups, one-shot event pattern, qty cap 999, buildConstraintHint min==max. |
-| 8.4b: Bold + Clean Theme Redesign | Done | `9a44467`, `5ef9dee`, `4583e31` | 3 commits, 8 files modified. New color palette (9 tokens, removed 10 old), removed dark theme entirely, added custom Shapes (8-16dp), tightened typography 11-20sp, replaced all hardcoded color imports with MaterialTheme.colorScheme tokens, category chips green→yellow selected state, avatar circle→rounded rect, elevation 8→4dp. Design spec: `docs/plans/2026-02-07-android-theme-redesign.md`. Implementation plan: `docs/plans/2026-02-07-android-theme-implementation.md`. |
-| 8.5: Cart Screen | Pending | | |
-| 8.6: Payment Screen | Pending | | |
-| 8.7: Catering Booking Screen | Pending | | |
-| 8.8: Thermal Printer Integration | Pending | | |
+| 8.4b: Bold + Clean Theme Redesign | Done | `9a44467`, `5ef9dee`, `4583e31` | 3 commits, 8 files modified. New color palette (9 tokens, removed 10 old), removed dark theme entirely, added custom Shapes (8-16dp), tightened typography 11-20sp, replaced all hardcoded color imports with MaterialTheme.colorScheme tokens, category chips green→yellow selected state, avatar circle→rounded rect, elevation 8→4dp. |
+| 8.5: Cart Screen | Done | `d771cb4` | 6 new files, 2 modified (1469 lines). CartScreen (full page, LazyColumn), CartViewModel (order metadata, customer search with 300ms debounce, BigDecimal discount calc), CartItemCard (edit/delete/qty controls, variant+modifier summary). CustomerApi (search+create), Customer model, CustomerRepository. Order type chips, table number, customer search dropdown, discount section, BAYAR button. |
+| 8.6: Payment Screen | Done | `0dbf3ef` | 6 new files, 3 modified. OrderApi (createOrder+addPayment), PaymentViewModel (multi-payment entries, BigDecimal totals, two-step API: create order→add payments), PaymentScreen (order summary, payment cards with CASH/QRIS/TRANSFER chips, cash change calc, running paid/remaining bar, success screen). Spec review fix: BigDecimal `==` → `compareTo()`. |
+| 8.7: Catering Booking Screen | Done | `6fde278` | 2 new files, 4 modified. CateringViewModel (50% DP calc via BigDecimal, RFC3339 date formatting, two-step create order→add DP payment, payment retry on orphaned order), CateringScreen (customer display, Material3 DatePicker future-only, delivery address, notes, DP payment with method chips, success screen). |
+| 8.8: Thermal Printer Integration | Done | `3f704f0` | 7 new files, 5 modified (1356 lines). EscPosCommands, ReceiptFormatter (formatReceipt + formatKitchenTicket), BluetoothPrinterManager (@Singleton, SPP connect, Mutex thread safety), PrinterService (fire-and-forget, auto-print), PrinterSettingsScreen + ViewModel (paired devices list, test print, paper width chips, auto-print toggle). |
 
-### Milestones 9-10 — NOT STARTED
+### CI/CD Setup — DONE
 
-> **Note:** Milestones 9 (SvelteKit) and 10 (Deploy) have separate plan files.
-> See plan file references at top of this document.
+**Plan:** `docs/plans/2026-02-08-cicd-plan.md`
+
+| Task | Status | Commit | Notes |
+|------|--------|--------|-------|
+| 1: Update CORS origins | Done | `5672a0e` | Added staging + production admin domains |
+| 2: API CI workflow | Done | `8fc84be` | .github/workflows/api-ci.yml — test→build→push→deploy staging |
+| 3: Admin CI workflow | Done | `dd96446` | .github/workflows/admin-ci.yml — build→push→deploy staging |
+| 4: Production promotion workflow | Done | `a944826` | .github/workflows/promote.yml — re-tag staging→latest, deploy prod |
+| 5: VPS deploy compose files | Done | `5608222` | deploy/ directory: postgres, staging, production compose + env examples |
+| 6: Update .gitignore | Done | `ed3e6d1` | deploy/*/.env, admin.env, *-secrets.md all ignored |
+| End-to-end pipeline test | Done | `4bc08b3` | Staging + production both verified via /health |
+
+**Architecture:** GitHub Actions → build in CI → push to ghcr.io → SSH to VPS → docker compose pull + up. Push to main → staging, tag v* → production.
+
+### Milestone 10: Deploy & Seed — DONE
+
+| Task | Status | Commit | Notes |
+|------|--------|--------|-------|
+| 10.1: Deploy to VPS | Done | — | Covered by CI/CD (GitHub Actions → ghcr.io → SSH deploy) |
+| 10.1b: Backup script (production) | Done | `19a5484` | `deploy/postgres/backup.sh` — backs up both pos_staging + pos_production |
+| 10.2: Seed script | Done | `bbc02c3` | `api/cmd/seed/main.go` — creates outlet + owner user. Idempotent, tx-wrapped. |
+
+### Milestone 9: SvelteKit Admin — DONE
+
+> **Plan:** `docs/plans/2026-02-06-sveltekit-admin-plan.md`
+
+| Task | Status | Commit | Notes |
+|------|--------|--------|-------|
+| 9.1: Scaffold SvelteKit Project | Done | `6e73b06` | SvelteKit 2 + Svelte 5 + Tailwind CSS 4 + TypeScript + pnpm. adapter-node for Docker. DM Sans font. Bold+Clean design tokens as CSS vars in @theme block. Sidebar (240px fixed, 6 nav links). |
+| 9.2: Auth Pages (Login + Protected Layout) | Done | `404d2fa` | Server-side auth: JWT in 3 httpOnly cookies (access_token, refresh_token, user_info). Auth hook decodes JWT payload (base64). Login page with Bold+Clean design. Protected layout with sidebar. Spec review caught JWT field mismatch: Go API uses `user_id` not `sub` → fixed with user_info cookie. Code quality caught open redirect vulnerability → validated redirect path. |
+| 9.3: Dashboard Page | Done | `6e93ff8` | 4 KPI cards (Rp format), pure CSS hourly sales bar chart (no Chart.js), live active orders panel with 10s polling. Spec review caught Go API wraps order list in {orders:[]} and single status filter → two parallel calls merged. Extracted formatRupiah to shared utils. |
+| 9.4: Menu Management Pages | Done | `3d3a8dc` | Category CRUD tabs, product grid with search+category filter, product detail/edit page (16 form actions), VariantGroupEditor, ModifierGroupEditor, Combo items. Spec review caught TS types didn't match Go API nullable fields. Code quality caught missing is_active toggle. |
+| 9.5: Orders Page | Done | `f6f3ece` | Order list with filters (status, type, date range, search), tab bar (Semua/Katering), pagination. OrderDetail slide-in panel, OrderTimeline. Proxy endpoint enriches items with product_name + customer info. Extracted labels.ts (DRY). |
+| 9.6: Customer CRM Page | Done | `2183f9d` | Customer list with search/pagination, inline add/edit/delete. Detail page: contact card, 3 stats cards (total spend, visits, avg ticket), favorite items (top 5), order history. Spec review caught `quantity`→`total_qty` field mismatch and `FullOrderListResponse`→bare `Order[]` array. Code quality caught missing id validation on update/delete. Extracted formatShortDateTime to shared labels.ts. |
+| 9.7: Reports Page | Done | `528aa74` | Date range picker, 4 tabs (Penjualan/Produk/Pembayaran/Per Outlet), pure CSS bar charts, CSV export per tab, OWNER-only outlet comparison. Code quality caught CSV escaping vulnerability → added RFC 4180 escapeCsvField helper. |
+| 9.8: Settings & User Management | Done | `2ab783d` | User CRUD (list, create, edit, soft-delete), role-based access (OWNER/MANAGER only), self-protection on delete, role dropdown, optional PIN. Info section with coming-soon note. **Bonus fix:** Discovered ADMIN→MANAGER role enum mismatch across UserRole type and Sidebar.svelte (Go API uses MANAGER, not ADMIN). |
+
+**Known gaps:** No outlet selector for Owner role on dashboard. No dark theme (by design). Nav icons are `##` placeholders. Go API order items don't return variant_name/modifier_name — shows generic labels. No way to remove a PIN once set (API gap).
+
+### Android Order Flow — IN PROGRESS
+
+> **Plan:** `docs/plans/2026-02-08-android-order-flow-plan.md`
+> **Design:** `docs/plans/2026-02-08-android-order-flow-design.md`
+
+| Task | Status | Commit | Notes |
+|------|--------|--------|-------|
+| 1: Go API — ListActiveOrders + amount_paid | Done | `f148a19` | New ListActiveOrders SQL query (active orders + unsettled catering, amount_paid subquery). ListActive handler (default limit 50, max 100). activeOrderResponse type. Route /active before /{id}. 5 tests. Code review fix: missing CompletedAt in activeOrderRowToOrder converter. 406 tests total. |
+| 2: Android — Order detail response models | Done | `5dafc8b` | 9 new data classes in Order.kt: OrderDetailResponse, OrderItemResponse, OrderItemModifierResponse, PaymentDetailResponse, ActiveOrdersResponse, ActiveOrderResponse, AddOrderItemRequest, UpdateOrderItemRequest, ItemActionResponse. Pure DTOs matching Go API shapes. |
+| 3: Android — Extended OrderApi + OrderRepository | Done | `c198037` | 6 new Retrofit endpoints (listActiveOrders, getOrder, cancelOrder, addOrderItem, updateOrderItem, deleteOrderItem) + 6 repository wrappers with safeApiCall. |
+| 4: Android — Order List Screen | Done | `e4a212b` | OrderListScreen + OrderListViewModel. Top bar "Pesanan Aktif", 3 filter chips (Semua/Belum Bayar/Lunas), order cards (status badges, payment status, type context, timestamp). PullToRefreshBox. Code review fixes: eagerly computed filteredOrders (was lazy get()), extracted fetchOrders(isRefresh) to eliminate DRY violation, cached DateTimeFormatter, fixed fully-qualified PaddingValues + unused import. |
+| 5: Android — Order Detail Screen | Pending | — | |
+| 6: Android — Cart SIMPAN Button | Pending | — | |
+| 7: Android — Cart Edit Mode | Pending | — | |
+| 8: Android — Payment Existing Order Support | Pending | — | |
+| 9: Android — Bill + Receipt Image + Share | Pending | — | |
+| 10: Android — Navigation Wiring | Pending | — | |
 
 ## Test Count
 
-401 unit tests passing (3 auth + 303 handler + 28 service + 7 middleware + 8 ws + 52 subtests) + 1 integration test (build tag: `integration`)
+406 unit tests passing (3 auth + 308 handler + 28 service + 7 middleware + 8 ws + 52 subtests) + 1 integration test (build tag: `integration`)
 
 ## Resume Prompt
 
 After `/clear`, use:
 ```
-Read PROGRESS.md and the Android plan file (android-pos-plan.md), then continue from the next pending task (8.5 Cart Screen) using subagent-driven-development. Working in worktree .worktrees/milestone-8-android-pos/ on branch feature/milestone-8-android-pos.
+Read PROGRESS.md. Android Order Flow IN PROGRESS — tasks 1-4 done (API endpoint, models, API client, Order List screen), tasks 5-10 pending. Worktree at .worktrees/android-order-flow, branch feature/android-order-flow (4 commits ahead). Use continue-execute with android order flow arg.
 ```
 
 ## Session Log
 
+- **2026-02-08**: Session 21 — **Android Order Flow started.** Completed tasks 1-4. Created worktree `.worktrees/android-order-flow` on branch `feature/android-order-flow`. (Task 1) Go API: new `ListActiveOrders` SQL query with `amount_paid` correlated subquery, `ListActive` handler, 5 tests. Code review caught missing `CompletedAt` field in converter → fixed. (Task 2) Android: 9 new Kotlin data classes matching Go API response shapes. Code review false positive about incomplete `ActiveOrderResponse` — correctly debunked (Go handler doesn't fetch items for list endpoint). (Task 3) Android: 6 Retrofit endpoints + 6 repository wrappers. Lightweight review — pure boilerplate, no issues. (Task 4) Android: OrderListScreen with filter chips (Semua/Belum Bayar/Lunas), order cards with colored status badges, payment status indicators, PullToRefreshBox. Code review caught 3 issues: (1) computed `filteredOrders` property creating BigDecimal objects on every access → refactored to eagerly computed in ViewModel, (2) DRY violation (loadOrders/refresh nearly identical) → extracted `fetchOrders(isRefresh)`, (3) `DateTimeFormatter` created per call → cached as top-level val. Also fixed unused import and fully-qualified `PaddingValues`. 4 commits, 4 files new, 6 files modified.
 - **2026-02-07**: Milestone 3 tasks 3.1–3.4 completed. Each task went through subagent-driven-development: implement → spec review → code quality review → fix → commit. Task 3.5 (Combo Items) pending.
 - **2026-02-07**: Session 2 — Completed 3.5 (Combo Items) and 4.1 (Order Creation). Milestone 3 now DONE. Milestone 4 started. Task 4.1 introduced first service layer (`service/order.go`) with transaction handling, price snapshots, discount math, and retry-on-conflict for order numbers. Two review cycles caught: missing service tests (added 28), race condition fix, string-matching error classification replaced with sentinel errors.
 - **2026-02-07**: Session 3 — Completed 4.2 (Order Queries & Status) and 4.3 (Order Item Modifications). Each went through full subagent-driven-development cycle. Key review findings fixed: (4.2) TOCTOU race on status transitions → added WHERE status=$current to SQL, completed_at never set → CASE WHEN COMPLETED, inconsistent cancel rules → synced PATCH/DELETE. (4.3) Runtime blocker: updated_at column missing from order_items → removed from SQL, no transaction on AddItem → added TxBeginner to handler, kitchen status on cancelled orders → added status check. 336 tests passing.
