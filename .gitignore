@@ -39,6 +39,7 @@ docker/data/
 .env
 !.env.example
 !docker/.env.example
+*-secrets.md
 
 # ── Deploy ────────────────────────
 deploy/*/.env
