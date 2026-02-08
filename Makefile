@@ -1,4 +1,4 @@
-.PHONY: help api-run api-test api-lint db-up db-down db-migrate db-rollback \
+.PHONY: help api-run api-test api-lint db-up db-down db-migrate db-rollback db-seed \
         admin-dev admin-build admin-test android-build docker-up docker-down
 
 help:                          ## Show this help
@@ -21,6 +21,10 @@ db-rollback:                   ## Rollback last migration
 db-reset:                      ## Drop and recreate all tables
 	migrate -path api/migrations -database "$${DATABASE_URL}" drop -f
 	migrate -path api/migrations -database "$${DATABASE_URL}" up
+
+db-seed:                       ## Load example data for dev/demo
+	docker compose -f docker/docker-compose.dev.yml cp api/seed/seed.sql postgres:/tmp/seed.sql
+	docker compose -f docker/docker-compose.dev.yml exec -T postgres psql -U pos -d pos_db -f /tmp/seed.sql
 
 # ── Go API ────────────────────────────────
 api-run:                       ## Run API server
