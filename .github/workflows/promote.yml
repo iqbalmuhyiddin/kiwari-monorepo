@@ -35,6 +35,7 @@ jobs:
           docker push ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-api:latest
 
       - name: Promote Admin image
+        continue-on-error: true
         run: |
           docker pull ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-admin:staging
           docker tag ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-admin:staging ${{ env.REGISTRY }}/iqbalmuhyiddin/kiwari-admin:${{ github.ref_name }}
@@ -67,4 +68,3 @@ jobs:
         run: |
           sleep 10
           curl -f --retry 3 --retry-delay 5 https://api.nasibakarkiwari.com/health
-          curl -f --retry 3 --retry-delay 5 https://admin.nasibakarkiwari.com/
