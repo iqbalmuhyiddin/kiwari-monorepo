@@ -47,3 +47,7 @@ deploy/*/admin.env
 !deploy/*/.env.example
 !deploy/*/admin.env.example
 deploy/postgres/init/*.env
+
+api/seed-tool
+
+SECRET.md
