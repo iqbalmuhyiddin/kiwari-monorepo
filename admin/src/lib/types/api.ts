@@ -26,3 +26,49 @@ export interface LoginResponse {
 		role: string;
 	};
 }
+
+// ── Dashboard / Reports types ────────────────────
+
+export interface DailySales {
+	date: string;
+	order_count: number;
+	total_revenue: string;
+	total_discount: string;
+	net_revenue: string;
+}
+
+export interface HourlySales {
+	hour: number;
+	order_count: number;
+	total_revenue: string;
+}
+
+export interface PaymentSummary {
+	payment_method: string;
+	transaction_count: number;
+	total_amount: string;
+}
+
+export interface OrderItem {
+	id: string;
+	product_name: string;
+	quantity: number;
+	unit_price: string;
+	subtotal: string;
+}
+
+export interface ActiveOrder {
+	id: string;
+	order_number: string;
+	order_type: string;
+	status: string;
+	total_amount: string;
+	created_at: string;
+	items: OrderItem[];
+}
+
+export interface OrderListResponse {
+	orders: ActiveOrder[];
+	limit: number;
+	offset: number;
+}
