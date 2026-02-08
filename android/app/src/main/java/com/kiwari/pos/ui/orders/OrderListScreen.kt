@@ -40,9 +40,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.kiwari.pos.data.model.ActiveOrderResponse
 import com.kiwari.pos.util.formatPrice
 import java.math.BigDecimal
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -275,56 +272,12 @@ private fun OrderCard(
 
             // Row 4: Timestamp
             Text(
-                text = formatTimestamp(order.createdAt),
+                text = formatOrderTimestamp(order.createdAt),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
-}
-
-@Composable
-private fun OrderStatusBadge(status: String) {
-    val (label, containerColor, labelColor) = when (status.uppercase()) {
-        "NEW" -> Triple(
-            "Baru",
-            MaterialTheme.colorScheme.primary,
-            MaterialTheme.colorScheme.onPrimary
-        )
-        "PREPARING" -> Triple(
-            "Diproses",
-            MaterialTheme.colorScheme.secondary,
-            MaterialTheme.colorScheme.onSecondary
-        )
-        "READY" -> Triple(
-            "Siap",
-            MaterialTheme.colorScheme.surfaceVariant,
-            MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        "CANCELLED" -> Triple(
-            "Batal",
-            MaterialTheme.colorScheme.error,
-            MaterialTheme.colorScheme.onError
-        )
-        else -> Triple(
-            status,
-            MaterialTheme.colorScheme.surfaceVariant,
-            MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-
-    Text(
-        text = label,
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Medium,
-        color = labelColor,
-        modifier = Modifier
-            .background(
-                color = containerColor,
-                shape = MaterialTheme.shapes.extraSmall
-            )
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-    )
 }
 
 @Composable
@@ -373,17 +326,5 @@ private fun formatOrderContext(order: ActiveOrderResponse): String {
         }
         "DELIVERY" -> "Delivery"
         else -> order.orderType
-    }
-}
-
-private val timestampFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm")
-
-private fun formatTimestamp(isoTimestamp: String): String {
-    return try {
-        val instant = Instant.parse(isoTimestamp)
-        val localDateTime = instant.atZone(ZoneId.systemDefault()).toLocalDateTime()
-        localDateTime.format(timestampFormatter)
-    } catch (_: Exception) {
-        isoTimestamp
     }
 }
