@@ -36,9 +36,9 @@ Everything lives in one repo, side by side:
 
 ```
 pos-superpower/
-├── api/            Go backend (the finished part)
-├── admin/          SvelteKit web panel (in progress)
-├── android/        Android POS app (in progress)
+├── api/            Go backend
+├── admin/          SvelteKit web panel
+├── android/        Android POS app
 ├── docker/         Production Docker setup
 ├── docs/plans/     Design docs & implementation plans
 ├── .github/        CI/CD workflows
@@ -162,7 +162,7 @@ No Android Studio — CLI-only. JDK 17 via Homebrew, `android-commandlinetools` 
 
 SvelteKit 2 + Svelte 5 + Tailwind CSS v4. Server-side rendered with client-side hydration.
 
-### What's built so far
+### All pages complete
 
 **Authentication** (Task 9.2): Login form → Go API `/auth/login` → JWT stored in 3 httpOnly cookies (access_token, refresh_token, user_info). Server hooks parse the JWT on every request, refresh proactively 30 seconds before expiry, and populate `event.locals.user`. Protected routes redirect to `/login` if unauthenticated. Open redirect protection on login redirects.
 
@@ -172,12 +172,13 @@ SvelteKit 2 + Svelte 5 + Tailwind CSS v4. Server-side rendered with client-side 
 
 **Orders** (Task 9.5): Order list with tab bar (All Orders / Catering), filter bar (status, type, date range, search by order number), and offset-based pagination. Catering tab shows card layout with DP amount, remaining balance, and upcoming date highlighting. Click any order → slide-in detail panel from the right showing items with product names, variant/modifier info, payment breakdown with method badges (CASH/QRIS/TRANSFER), order summary, and status action buttons for valid transitions. Includes a visual OrderTimeline (4-step: Baru→Diproses→Siap→Selesai) with green checkmarks and a glow effect on the active step. A proxy endpoint enriches order items with product names and customer info (the Go API only returns IDs, so the SvelteKit server resolves them).
 
-**Sidebar**: Navigation with role-based visibility — CASHIER and KITCHEN roles don't see Reports or Settings links. User info footer with initials avatar, name, and role.
+**Customer CRM** (Task 9.6): Customer list with search by name/phone, pagination, inline add/edit/delete. Customer detail page with contact card, 3 stats cards (total spend, visits, avg ticket), favorite items (top 5), and order history with pagination. All data loaded in parallel (customer + stats + orders).
 
-### What's pending
-- Customer CRM (search, stats, order history)
-- Reports with charts and CSV export
-- Settings (tax, receipt template, user management)
+**Reports** (Task 9.7): Date range picker (defaults to last 30 days), 4 tabs: Penjualan (daily sales table + bar chart), Produk (product ranking + horizontal bar chart), Pembayaran (payment method summary + stacked bar), Per Outlet (OWNER-only outlet comparison). CSV export per tab with proper RFC 4180 escaping. All charts are pure CSS — no Chart.js or external library.
+
+**Settings & User Management** (Task 9.8): App info section (outlet name, version, coming-soon note for future settings). User CRUD with role dropdown (OWNER/MANAGER/CASHIER/KITCHEN), optional PIN (4-6 digits), inline edit (no password update — API limitation), soft-delete with confirmation. OWNER/MANAGER role guard (server-side redirect). Self-protection: can't delete your own account.
+
+**Sidebar**: Navigation with role-based visibility — CASHIER and KITCHEN roles don't see Reports or Settings links. User info footer with initials avatar, name, and role.
 - Outlet selector for Owner role (needs outlets list API endpoint)
 
 ### Architecture decisions
@@ -279,10 +280,10 @@ Each worktree is a fully independent checkout. You can have the API running from
 | 6 | Router assembly & integration test | Done | Full lifecycle test with real PostgreSQL |
 | 7 | Docker production setup | Done | Compose files, Dockerfiles, backup script |
 | 8 | Android POS app | Done | 8 screens + theme redesign. 100 files, 10,384 lines. |
-| 9 | SvelteKit admin panel | ~63% | Scaffold, auth, dashboard, menu management, orders done. 3 pages pending (CRM, reports, settings). |
+| 9 | SvelteKit admin panel | Done | 8 tasks: scaffold, auth, dashboard, menu, orders, CRM, reports, settings. ~35 files. |
 | 10 | Deployment & seed script | Done | CI/CD pipeline, VPS deploy, seed script. v1.0.0 deployed. |
 
-**Backend + Android + CI/CD are complete.** The admin panel (M9) is the final milestone.
+**All milestones complete.** The full POS system is built and deployed.
 
 ---
 
@@ -314,6 +315,9 @@ Order list endpoints return `{orders: [...], limit, offset}` — not a bare arra
 
 ### Go API returns IDs, not names on order items
 The order detail endpoint returns `product_id`, `variant_id`, `modifier_id` — but NOT `product_name`, `variant_name`, or `modifier_name`. The Go API was built write-optimized (price snapshots at order time), but the read path doesn't JOIN to resolve human-readable names. The admin works around this with a SvelteKit proxy endpoint (`/api/orders/[id]`) that fetches the order AND the products list in parallel, then enriches items with product names before returning to the client. Same pattern for customer info. This is a pragmatic fix but the real solution is adding JOINs to the Go API's order detail query. Until then, variant and modifier names show generic labels.
+
+### ADMIN vs MANAGER role enum
+The Go API and PostgreSQL schema use `MANAGER` as the role enum value, but the SvelteKit admin was written with `ADMIN`. This meant MANAGER users couldn't see Reports or Settings links in the sidebar — the role check `['OWNER', 'ADMIN'].includes(user.role)` always failed because the JWT contains `MANAGER`. The fix was trivial (replace `ADMIN` with `MANAGER` in two files), but the lesson is: always verify your TypeScript enum values against the actual database schema, not what you think they should be. The source of truth is `000001_init_schema.up.sql`.
 
 ### Go query params: one value per key
 `r.URL.Query().Get("key")` returns only the first value. `?status=NEW&status=PREPARING` won't give you both — only `NEW`. To filter by multiple statuses, make separate API calls and merge results client-side.
