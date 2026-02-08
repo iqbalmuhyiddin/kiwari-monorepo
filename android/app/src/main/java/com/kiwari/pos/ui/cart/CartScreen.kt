@@ -64,7 +64,8 @@ import java.math.BigDecimal
 fun CartScreen(
     viewModel: CartViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {},
-    onNavigateToPayment: () -> Unit = {}
+    onNavigateToPayment: () -> Unit = {},
+    onNavigateToCatering: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -98,9 +99,14 @@ fun CartScreen(
                 total = uiState.total,
                 hasDiscount = uiState.discountType != null && uiState.discountValue.isNotBlank(),
                 isCartEmpty = uiState.cartItems.isEmpty(),
+                isCatering = uiState.orderType == OrderType.CATERING,
                 onPay = {
                     if (viewModel.validateForPayment()) {
-                        onNavigateToPayment()
+                        if (uiState.orderType == OrderType.CATERING) {
+                            onNavigateToCatering()
+                        } else {
+                            onNavigateToPayment()
+                        }
                     }
                 }
             )
@@ -544,6 +550,7 @@ private fun CartBottomSection(
     total: BigDecimal,
     hasDiscount: Boolean,
     isCartEmpty: Boolean,
+    isCatering: Boolean = false,
     onPay: () -> Unit
 ) {
     Surface(
@@ -631,7 +638,7 @@ private fun CartBottomSection(
                 )
             ) {
                 Text(
-                    text = "BAYAR",
+                    text = if (isCatering) "LANJUT BOOKING" else "BAYAR",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )

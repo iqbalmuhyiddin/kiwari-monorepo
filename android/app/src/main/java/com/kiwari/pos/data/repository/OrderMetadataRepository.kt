@@ -20,7 +20,10 @@ data class OrderMetadata(
     val discountAmount: BigDecimal = BigDecimal.ZERO,
     val notes: String = "",
     val subtotal: BigDecimal = BigDecimal.ZERO,
-    val total: BigDecimal = BigDecimal.ZERO
+    val total: BigDecimal = BigDecimal.ZERO,
+    val cateringDate: String? = null,
+    val cateringDpAmount: BigDecimal? = null,
+    val deliveryAddress: String? = null
 )
 
 @Singleton

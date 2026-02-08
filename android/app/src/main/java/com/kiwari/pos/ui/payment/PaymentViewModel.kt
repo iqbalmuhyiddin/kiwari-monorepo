@@ -13,6 +13,8 @@ import com.kiwari.pos.data.repository.OrderMetadata
 import com.kiwari.pos.data.repository.OrderMetadataRepository
 import com.kiwari.pos.data.repository.OrderRepository
 import com.kiwari.pos.util.coerceAtLeast
+import com.kiwari.pos.util.filterDecimalInput
+import com.kiwari.pos.util.parseBigDecimal
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -240,10 +242,10 @@ class PaymentViewModel @Inject constructor(
             discountValue = if (metadata.discountType != null && metadata.discountValue.isNotBlank()) {
                 metadata.discountValue
             } else null,
-            cateringDate = null, // TODO: populate from OrderMetadataRepository in Task 8.7
-            cateringDpAmount = null, // TODO: populate from OrderMetadataRepository in Task 8.7
+            cateringDate = metadata.cateringDate,
+            cateringDpAmount = metadata.cateringDpAmount?.toPlainString(),
             deliveryPlatform = null, // TODO: populate from OrderMetadataRepository when delivery is implemented
-            deliveryAddress = null, // TODO: populate from OrderMetadataRepository when delivery is implemented
+            deliveryAddress = metadata.deliveryAddress,
             items = items
         )
     }
@@ -306,19 +308,5 @@ class PaymentViewModel @Inject constructor(
             remaining = remaining,
             totalChange = totalChange
         )
-    }
-
-    private fun parseBigDecimal(value: String): BigDecimal {
-        return try {
-            if (value.isBlank()) BigDecimal.ZERO else BigDecimal(value)
-        } catch (e: NumberFormatException) {
-            BigDecimal.ZERO
-        }
-    }
-
-    private fun filterDecimalInput(input: String): String {
-        val filtered = input.filter { it.isDigit() || it == '.' }
-        if (filtered.count { it == '.' } > 1) return filtered.substringBefore('.') + "." + filtered.substringAfter('.').replace(".", "")
-        return filtered
     }
 }

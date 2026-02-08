@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.kiwari.pos.data.repository.TokenRepository
 import com.kiwari.pos.ui.cart.CartScreen
+import com.kiwari.pos.ui.catering.CateringScreen
 import com.kiwari.pos.ui.login.LoginScreen
 import com.kiwari.pos.ui.menu.CustomizationScreen
 import com.kiwari.pos.ui.menu.MenuScreen
@@ -22,6 +23,7 @@ sealed class Screen(val route: String) {
     object Menu : Screen("menu")
     object Cart : Screen("cart")
     object Payment : Screen("payment")
+    object Catering : Screen("catering")
     object Customization : Screen("customization/{productId}") {
         fun createRoute(productId: String) = "customization/$productId"
     }
@@ -78,12 +80,28 @@ fun NavGraph(
                 },
                 onNavigateToPayment = {
                     navController.navigate(Screen.Payment.route)
+                },
+                onNavigateToCatering = {
+                    navController.navigate(Screen.Catering.route)
                 }
             )
         }
 
         composable(Screen.Payment.route) {
             PaymentScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToMenu = {
+                    navController.navigate(Screen.Menu.route) {
+                        popUpTo(Screen.Menu.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.Catering.route) {
+            CateringScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 },
