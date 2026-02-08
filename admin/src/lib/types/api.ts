@@ -5,7 +5,7 @@
  * across hooks.server.ts, login/+page.server.ts, auth store, and components.
  */
 
-export type UserRole = 'OWNER' | 'ADMIN' | 'CASHIER' | 'KITCHEN';
+export type UserRole = 'OWNER' | 'MANAGER' | 'CASHIER' | 'KITCHEN';
 
 export interface SessionUser {
 	id: string;
@@ -25,6 +25,20 @@ export interface LoginResponse {
 		email: string;
 		role: string;
 	};
+}
+
+// ── User Management types ────────────────────
+
+export interface AdminUser {
+	id: string;
+	outlet_id: string;
+	email: string;
+	full_name: string;
+	role: UserRole;
+	pin: string | null;
+	is_active: boolean;
+	created_at: string;
+	updated_at: string;
 }
 
 // ── Dashboard / Reports types ────────────────────

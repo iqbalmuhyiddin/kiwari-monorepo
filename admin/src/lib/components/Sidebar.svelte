@@ -17,8 +17,8 @@
 		{ label: 'Menu', href: '/menu', icon: '##' },
 		{ label: 'Orders', href: '/orders', icon: '##' },
 		{ label: 'Customers', href: '/customers', icon: '##' },
-		{ label: 'Reports', href: '/reports', icon: '##', roles: ['OWNER', 'ADMIN'] },
-		{ label: 'Settings', href: '/settings', icon: '##', roles: ['OWNER', 'ADMIN'] }
+		{ label: 'Reports', href: '/reports', icon: '##', roles: ['OWNER', 'MANAGER'] },
+		{ label: 'Settings', href: '/settings', icon: '##', roles: ['OWNER', 'MANAGER'] }
 	];
 
 	function isActive(href: string): boolean {
