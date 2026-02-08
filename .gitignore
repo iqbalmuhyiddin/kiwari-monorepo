@@ -42,5 +42,7 @@ docker/data/
 
 # ── Deploy ────────────────────────
 deploy/*/.env
+deploy/*/admin.env
 !deploy/*/.env.example
+!deploy/*/admin.env.example
 deploy/postgres/init/*.env

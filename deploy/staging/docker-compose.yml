@@ -11,7 +11,7 @@ services:
     image: ghcr.io/iqbalmuhyiddin/kiwari-admin:staging
     container_name: pos-admin-staging
     restart: unless-stopped
-    env_file: .env
+    env_file: admin.env
     networks:
       - proxy
 

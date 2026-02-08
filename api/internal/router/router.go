@@ -28,9 +28,10 @@ func New(cfg *config.Config, queries *database.Queries, pool *pgxpool.Pool, hub 
 	// CORS configuration
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: []string{
-			"http://localhost:5173",                 // SvelteKit dev server
-			"https://admin.nasibakarkiwari.com",     // Production admin
-			"https://stg-admin.nasibakarkiwari.com", // Staging admin
+			"http://localhost:5173",                  // SvelteKit dev server
+			"https://admin.nasibakarkiwari.com",      // Production admin
+			"https://stg-admin.nasibakarkiwari.com",  // Staging admin
+			"https://pos.nasibakarkiwari.com",        // Legacy admin (remove after migration)
 		},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},

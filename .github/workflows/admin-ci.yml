@@ -6,7 +6,12 @@ on:
     paths:
       - 'admin/**'
       - 'docker/Dockerfile.admin'
+      - '.github/workflows/admin-ci.yml'
   workflow_call:
+
+concurrency:
+  group: deploy-staging-admin
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
@@ -47,11 +52,15 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          envs: GHCR_TOKEN
           script: |
-            echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u iqbalmuhyiddin --password-stdin
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u iqbalmuhyiddin --password-stdin
             cd ~/docker/pos-staging
             docker compose pull pos-admin-staging
             docker compose up -d pos-admin-staging
+            docker image prune -f
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
 
       - name: Health check
         run: |
