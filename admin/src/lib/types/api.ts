@@ -230,3 +230,31 @@ export interface FullOrderListResponse {
 	limit: number;
 	offset: number;
 }
+
+// ── Customer CRM types ────────────────────
+
+export interface Customer {
+	id: string;
+	outlet_id: string;
+	name: string;
+	phone: string;
+	email: string | null;
+	notes: string | null;
+	is_active: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CustomerTopItem {
+	product_id: string;
+	product_name: string;
+	total_qty: number;
+	total_revenue: string;
+}
+
+export interface CustomerStats {
+	total_orders: number;
+	total_spend: string;
+	avg_ticket: string;
+	top_items: CustomerTopItem[];
+}

@@ -55,3 +55,14 @@ export function formatDate(iso: string): string {
 		timeZone: 'Asia/Jakarta'
 	});
 }
+
+export function formatShortDateTime(iso: string): string {
+	const d = new Date(iso);
+	return d.toLocaleString('id-ID', {
+		day: 'numeric',
+		month: 'short',
+		hour: '2-digit',
+		minute: '2-digit',
+		timeZone: 'Asia/Jakarta'
+	});
+}
