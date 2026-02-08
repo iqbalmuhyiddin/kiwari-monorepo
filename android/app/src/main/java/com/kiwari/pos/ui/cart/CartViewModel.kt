@@ -3,12 +3,16 @@ package com.kiwari.pos.ui.cart
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kiwari.pos.data.model.CartItem
+import com.kiwari.pos.data.model.CreateOrderItemModifierRequest
+import com.kiwari.pos.data.model.CreateOrderItemRequest
+import com.kiwari.pos.data.model.CreateOrderRequest
 import com.kiwari.pos.data.model.Customer
 import com.kiwari.pos.data.model.Result
 import com.kiwari.pos.data.repository.CartRepository
 import com.kiwari.pos.data.repository.CustomerRepository
 import com.kiwari.pos.data.repository.OrderMetadata
 import com.kiwari.pos.data.repository.OrderMetadataRepository
+import com.kiwari.pos.data.repository.OrderRepository
 import com.kiwari.pos.util.coerceAtLeast
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
@@ -59,7 +63,11 @@ data class CartUiState(
     val customerError: String? = null,
     // Edit item notes dialog
     val editingCartItemId: String? = null,
-    val editingNotes: String = ""
+    val editingNotes: String = "",
+    // Save order (SIMPAN)
+    val isSaving: Boolean = false,
+    val savedOrderId: String? = null,
+    val saveError: String? = null
 )
 
 @OptIn(FlowPreview::class)
@@ -67,7 +75,8 @@ data class CartUiState(
 class CartViewModel @Inject constructor(
     private val cartRepository: CartRepository,
     private val customerRepository: CustomerRepository,
-    private val orderMetadataRepository: OrderMetadataRepository
+    private val orderMetadataRepository: OrderMetadataRepository,
+    private val orderRepository: OrderRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CartUiState())
@@ -357,6 +366,88 @@ class CartViewModel @Inject constructor(
             )
         )
         return true
+    }
+
+    /**
+     * Save order without payment (SIMPAN button).
+     * Creates order via API, clears cart on success, sets savedOrderId for navigation.
+     */
+    fun saveOrder() {
+        val state = _uiState.value
+        if (state.cartItems.isEmpty() || state.isSaving) return
+
+        // Validate catering requires customer
+        if (state.orderType == OrderType.CATERING && state.selectedCustomer == null) {
+            _uiState.update { it.copy(cateringCustomerError = true) }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSaving = true, saveError = null, savedOrderId = null) }
+
+            val request = buildCreateOrderRequest(state)
+            when (val result = orderRepository.createOrder(request)) {
+                is Result.Success -> {
+                    cartRepository.clearCart()
+                    orderMetadataRepository.clear()
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            savedOrderId = result.data.id
+                        )
+                    }
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            saveError = result.message
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun clearSavedOrderId() {
+        _uiState.update { it.copy(savedOrderId = null) }
+    }
+
+    fun clearSaveError() {
+        _uiState.update { it.copy(saveError = null) }
+    }
+
+    private fun buildCreateOrderRequest(state: CartUiState): CreateOrderRequest {
+        val items = state.cartItems.map { cartItem ->
+            CreateOrderItemRequest(
+                productId = cartItem.product.id,
+                variantId = cartItem.selectedVariants.firstOrNull()?.variantId,
+                quantity = cartItem.quantity,
+                notes = cartItem.notes.ifBlank { null },
+                modifiers = cartItem.selectedModifiers.map { mod ->
+                    CreateOrderItemModifierRequest(
+                        modifierId = mod.modifierId,
+                        quantity = 1
+                    )
+                }.ifEmpty { null }
+            )
+        }
+
+        return CreateOrderRequest(
+            orderType = state.orderType.name,
+            tableNumber = state.tableNumber.ifBlank { null },
+            customerId = state.selectedCustomer?.id,
+            notes = state.orderNotes.ifBlank { null },
+            discountType = state.discountType?.name,
+            discountValue = if (state.discountType != null && state.discountValue.isNotBlank()) {
+                state.discountValue
+            } else null,
+            cateringDate = null,
+            cateringDpAmount = null,
+            deliveryPlatform = null,
+            deliveryAddress = null,
+            items = items
+        )
     }
 
     private fun calculateDiscountAmount(
