@@ -1,5 +1,6 @@
 package com.kiwari.pos.ui.payment
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kiwari.pos.data.model.AddPaymentRequest
@@ -7,6 +8,7 @@ import com.kiwari.pos.data.model.CartItem
 import com.kiwari.pos.data.model.CreateOrderItemModifierRequest
 import com.kiwari.pos.data.model.CreateOrderItemRequest
 import com.kiwari.pos.data.model.CreateOrderRequest
+import com.kiwari.pos.data.model.OrderDetailResponse
 import com.kiwari.pos.data.model.Result
 import com.kiwari.pos.data.repository.CartRepository
 import com.kiwari.pos.data.repository.OrderMetadata
@@ -40,9 +42,18 @@ data class PaymentEntry(
 )
 
 data class PaymentUiState(
-    // Order summary (from metadata + cart)
+    // Order summary (from metadata + cart OR from existing order)
     val cartItems: List<CartItem> = emptyList(),
     val metadata: OrderMetadata = OrderMetadata(),
+    // Existing order data (when paying an existing order)
+    val isExistingOrder: Boolean = false,
+    val existingOrder: OrderDetailResponse? = null,
+    val isLoadingOrder: Boolean = false,
+    // Order total — unified field for both modes
+    val orderTotal: BigDecimal = BigDecimal.ZERO,
+    val orderSubtotal: BigDecimal = BigDecimal.ZERO,
+    val orderDiscountAmount: BigDecimal = BigDecimal.ZERO,
+    val hasDiscount: Boolean = false,
     // Payment mode: single (default) vs multi (opt-in via "+ Tambah")
     val isMultiPayment: Boolean = false,
     // Payment entries
@@ -54,9 +65,10 @@ data class PaymentUiState(
     // Submission state
     val isSubmitting: Boolean = false,
     val error: String? = null,
-    // Success state
+    // Completion state
     val isSuccess: Boolean = false,
-    val orderNumber: String = ""
+    val orderNumber: String = "",
+    val completedOrderId: String? = null
 )
 
 @HiltViewModel
@@ -64,27 +76,82 @@ class PaymentViewModel @Inject constructor(
     private val cartRepository: CartRepository,
     private val orderMetadataRepository: OrderMetadataRepository,
     private val orderRepository: OrderRepository,
-    private val printerService: PrinterService
+    private val printerService: PrinterService,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    private val existingOrderId: String? = savedStateHandle["orderId"]
 
     private val _uiState = MutableStateFlow(PaymentUiState())
     val uiState: StateFlow<PaymentUiState> = _uiState.asStateFlow()
 
     init {
-        loadOrderData()
+        if (existingOrderId != null) {
+            loadExistingOrder(existingOrderId)
+        } else {
+            loadCartData()
+        }
     }
 
-    private fun loadOrderData() {
+    private fun loadCartData() {
         val metadata = orderMetadataRepository.metadata
         val cartItems = cartRepository.items.value
         _uiState.update {
             it.copy(
                 cartItems = cartItems,
                 metadata = metadata,
+                isExistingOrder = false,
+                orderTotal = metadata.total,
+                orderSubtotal = metadata.subtotal,
+                orderDiscountAmount = metadata.discountAmount,
+                hasDiscount = metadata.discountType != null && metadata.discountValue.isNotBlank(),
                 // Single payment mode: paid = total, remaining = 0
                 totalPaid = metadata.total,
                 remaining = BigDecimal.ZERO
             )
+        }
+    }
+
+    private fun loadExistingOrder(orderId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isExistingOrder = true, isLoadingOrder = true, error = null) }
+
+            when (val result = orderRepository.getOrder(orderId)) {
+                is Result.Success -> {
+                    val order = result.data
+                    val total = BigDecimal(order.totalAmount)
+                    val subtotal = BigDecimal(order.subtotal)
+                    val discountAmount = BigDecimal(order.discountAmount)
+                    val hasDiscount = discountAmount.compareTo(BigDecimal.ZERO) > 0
+
+                    // Calculate already-paid amount
+                    val alreadyPaid = order.payments
+                        .filter { it.status == "COMPLETED" }
+                        .fold(BigDecimal.ZERO) { acc, p ->
+                            acc.add(BigDecimal(p.amount))
+                        }
+                    // The amount still owed
+                    val amountDue = total.subtract(alreadyPaid).coerceAtLeast(BigDecimal.ZERO)
+
+                    _uiState.update {
+                        it.copy(
+                            isLoadingOrder = false,
+                            existingOrder = order,
+                            orderTotal = amountDue,
+                            orderSubtotal = subtotal,
+                            orderDiscountAmount = discountAmount,
+                            hasDiscount = hasDiscount,
+                            totalPaid = amountDue,
+                            remaining = BigDecimal.ZERO
+                        )
+                    }
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(isLoadingOrder = false, error = result.message)
+                    }
+                }
+            }
         }
     }
 
@@ -154,6 +221,10 @@ class PaymentViewModel @Inject constructor(
         _uiState.update { it.copy(error = null) }
     }
 
+    fun clearCompletedOrderId() {
+        _uiState.update { it.copy(completedOrderId = null) }
+    }
+
     fun onSubmitOrder() {
         val state = _uiState.value
 
@@ -164,6 +235,37 @@ class PaymentViewModel @Inject constructor(
             return
         }
 
+        if (state.isExistingOrder) {
+            submitExistingOrderPayment(state)
+        } else {
+            submitNewOrder(state)
+        }
+    }
+
+    private fun submitExistingOrderPayment(state: PaymentUiState) {
+        val orderId = existingOrderId ?: return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSubmitting = true, error = null) }
+
+            val paymentError = submitPayments(orderId, state)
+            if (paymentError != null) {
+                _uiState.update {
+                    it.copy(isSubmitting = false, error = paymentError)
+                }
+            } else {
+                // No auto-print for existing orders — user can print from OrderDetail (Task 9)
+                _uiState.update {
+                    it.copy(
+                        isSubmitting = false,
+                        completedOrderId = orderId
+                    )
+                }
+            }
+        }
+    }
+
+    private fun submitNewOrder(state: PaymentUiState) {
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true, error = null) }
 
@@ -215,7 +317,7 @@ class PaymentViewModel @Inject constructor(
             val amount = if (state.isMultiPayment) {
                 parseBigDecimal(entry.amount)
             } else {
-                state.metadata.total
+                state.orderTotal
             }
             if (amount <= BigDecimal.ZERO) continue
 
@@ -274,6 +376,8 @@ class PaymentViewModel @Inject constructor(
     }
 
     private fun validatePayments(state: PaymentUiState): String? {
+        val total = state.orderTotal
+
         if (state.isMultiPayment) {
             // Multi-payment: validate amounts per entry
             val nonEmptyPayments = state.payments.filter {
@@ -288,11 +392,11 @@ class PaymentViewModel @Inject constructor(
                 acc.add(parseBigDecimal(entry.amount))
             }
 
-            if (totalPaid.compareTo(state.metadata.total) > 0) {
+            if (totalPaid.compareTo(total) > 0) {
                 return "Total pembayaran melebihi total pesanan"
             }
 
-            if (totalPaid.compareTo(state.metadata.total) < 0) {
+            if (totalPaid.compareTo(total) < 0) {
                 return "Total pembayaran belum mencukupi"
             }
 
@@ -311,7 +415,7 @@ class PaymentViewModel @Inject constructor(
             val entry = state.payments.first()
             if (entry.method == PaymentMethod.CASH) {
                 val received = parseBigDecimal(entry.amountReceived)
-                if (received > BigDecimal.ZERO && received < state.metadata.total) {
+                if (received > BigDecimal.ZERO && received < total) {
                     return "Uang diterima harus >= total pesanan"
                 }
             }
@@ -356,12 +460,14 @@ class PaymentViewModel @Inject constructor(
     }
 
     private fun recalculateTotals(state: PaymentUiState): PaymentUiState {
+        val total = state.orderTotal
+
         if (state.isMultiPayment) {
             // Multi-payment: sum amounts from each entry
             val totalPaid = state.payments.fold(BigDecimal.ZERO) { acc, entry ->
                 acc.add(parseBigDecimal(entry.amount))
             }
-            val remaining = state.metadata.total.subtract(totalPaid).coerceAtLeast(BigDecimal.ZERO)
+            val remaining = total.subtract(totalPaid).coerceAtLeast(BigDecimal.ZERO)
 
             val totalChange = state.payments
                 .filter { it.method == PaymentMethod.CASH }
@@ -383,13 +489,13 @@ class PaymentViewModel @Inject constructor(
             val entry = state.payments.first()
             val totalChange = if (entry.method == PaymentMethod.CASH) {
                 val received = parseBigDecimal(entry.amountReceived)
-                if (received > state.metadata.total) {
-                    received.subtract(state.metadata.total)
+                if (received > total) {
+                    received.subtract(total)
                 } else BigDecimal.ZERO
             } else BigDecimal.ZERO
 
             return state.copy(
-                totalPaid = state.metadata.total,
+                totalPaid = total,
                 remaining = BigDecimal.ZERO,
                 totalChange = totalChange
             )

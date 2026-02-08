@@ -55,6 +55,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.kiwari.pos.data.model.CartItem
+import com.kiwari.pos.data.model.OrderItemResponse
 import com.kiwari.pos.util.formatPrice
 import java.math.BigDecimal
 
@@ -63,7 +64,8 @@ import java.math.BigDecimal
 fun PaymentScreen(
     viewModel: PaymentViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {},
-    onNavigateToMenu: () -> Unit = {}
+    onNavigateToMenu: () -> Unit = {},
+    onNavigateToOrderDetail: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -81,11 +83,31 @@ fun PaymentScreen(
         }
     }
 
+    // Navigate to order detail when existing order payment completes
+    LaunchedEffect(uiState.completedOrderId) {
+        uiState.completedOrderId?.let { orderId ->
+            viewModel.clearCompletedOrderId()
+            onNavigateToOrderDetail(orderId)
+        }
+    }
+
+    // New order success: show success screen then navigate to menu
     if (uiState.isSuccess) {
         SuccessScreen(
             orderNumber = uiState.orderNumber,
             onDone = onNavigateToMenu
         )
+        return
+    }
+
+    // Loading state for existing order
+    if (uiState.isLoadingOrder) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+        }
         return
     }
 
@@ -121,7 +143,7 @@ fun PaymentScreen(
                 totalPaid = uiState.totalPaid,
                 remaining = uiState.remaining,
                 totalChange = uiState.totalChange,
-                orderTotal = uiState.metadata.total,
+                orderTotal = uiState.orderTotal,
                 isMultiPayment = uiState.isMultiPayment,
                 isSubmitting = uiState.isSubmitting,
                 canSubmit = uiState.remaining.compareTo(BigDecimal.ZERO) == 0 && !uiState.isSubmitting,
@@ -147,22 +169,31 @@ fun PaymentScreen(
                 )
             }
 
-            // Order items
-            items(
-                items = uiState.cartItems,
-                key = { it.id }
-            ) { cartItem ->
-                OrderSummaryItem(cartItem = cartItem)
+            // Order items — existing order or cart items
+            if (uiState.isExistingOrder) {
+                val orderItems = uiState.existingOrder?.items ?: emptyList()
+                items(
+                    items = orderItems,
+                    key = { it.id }
+                ) { orderItem ->
+                    ExistingOrderSummaryItem(orderItem = orderItem)
+                }
+            } else {
+                items(
+                    items = uiState.cartItems,
+                    key = { it.id }
+                ) { cartItem ->
+                    OrderSummaryItem(cartItem = cartItem)
+                }
             }
 
             // Subtotal, discount, total
             item {
                 OrderTotalSection(
-                    subtotal = uiState.metadata.subtotal,
-                    discountAmount = uiState.metadata.discountAmount,
-                    total = uiState.metadata.total,
-                    hasDiscount = uiState.metadata.discountType != null
-                            && uiState.metadata.discountValue.isNotBlank()
+                    subtotal = uiState.orderSubtotal,
+                    discountAmount = uiState.orderDiscountAmount,
+                    total = uiState.orderTotal,
+                    hasDiscount = uiState.hasDiscount
                 )
             }
 
@@ -205,7 +236,7 @@ fun PaymentScreen(
                     entry = entry,
                     isMultiPayment = uiState.isMultiPayment,
                     showRemoveButton = uiState.payments.size > 1,
-                    orderTotal = uiState.metadata.total,
+                    orderTotal = uiState.orderTotal,
                     onMethodChanged = { method ->
                         viewModel.onPaymentMethodChanged(entry.id, method)
                     },
@@ -270,6 +301,52 @@ private fun OrderSummaryItem(cartItem: CartItem) {
         }
         Text(
             text = formatPrice(cartItem.lineTotal),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun ExistingOrderSummaryItem(orderItem: OrderItemResponse) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "${orderItem.quantity}x Item",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            // Unit price
+            Text(
+                text = "  @ ${formatPrice(BigDecimal(orderItem.unitPrice))}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            // Modifiers
+            orderItem.modifiers.forEach { mod ->
+                val modPrice = BigDecimal(mod.unitPrice).multiply(BigDecimal(mod.quantity))
+                Text(
+                    text = "  + Modifier ${if (modPrice.compareTo(BigDecimal.ZERO) > 0) formatPrice(modPrice) else ""}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            // Notes
+            if (!orderItem.notes.isNullOrBlank()) {
+                Text(
+                    text = "  Catatan: ${orderItem.notes}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Text(
+            text = formatPrice(BigDecimal(orderItem.subtotal)),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Medium

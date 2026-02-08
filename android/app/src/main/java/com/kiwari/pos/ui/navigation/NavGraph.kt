@@ -28,7 +28,11 @@ sealed class Screen(val route: String) {
             return if (editOrderId != null) "cart?editOrderId=$editOrderId" else "cart"
         }
     }
-    object Payment : Screen("payment")
+    object Payment : Screen("payment?orderId={orderId}") {
+        fun createRoute(orderId: String? = null): String {
+            return if (orderId != null) "payment?orderId=$orderId" else "payment"
+        }
+    }
     object Catering : Screen("catering")
     object Customization : Screen("customization/{productId}") {
         fun createRoute(productId: String) = "customization/$productId"
@@ -99,7 +103,7 @@ fun NavGraph(
                     navController.popBackStack()
                 },
                 onNavigateToPayment = {
-                    navController.navigate(Screen.Payment.route)
+                    navController.navigate(Screen.Payment.createRoute())
                 },
                 onNavigateToCatering = {
                     navController.navigate(Screen.Catering.route)
@@ -112,7 +116,14 @@ fun NavGraph(
             )
         }
 
-        composable(Screen.Payment.route) {
+        composable(
+            route = Screen.Payment.route,
+            arguments = listOf(navArgument("orderId") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            })
+        ) {
             PaymentScreen(
                 onNavigateBack = {
                     navController.popBackStack()
@@ -120,6 +131,11 @@ fun NavGraph(
                 onNavigateToMenu = {
                     navController.navigate(Screen.Menu.route) {
                         popUpTo(Screen.Menu.route) { inclusive = true }
+                    }
+                },
+                onNavigateToOrderDetail = { orderId ->
+                    navController.navigate(Screen.OrderDetail.createRoute(orderId)) {
+                        popUpTo(Screen.Menu.route)
                     }
                 }
             )
@@ -166,7 +182,7 @@ fun NavGraph(
                     navController.popBackStack()
                 },
                 onPay = { orderId ->
-                    // TODO: navigate to payment for existing order
+                    navController.navigate(Screen.Payment.createRoute(orderId = orderId))
                 },
                 onEdit = { orderId ->
                     navController.navigate(Screen.Cart.createRoute(editOrderId = orderId)) {
