@@ -6,6 +6,7 @@ import com.kiwari.pos.BuildConfig
 import com.kiwari.pos.data.api.AuthApi
 import com.kiwari.pos.data.api.CustomerApi
 import com.kiwari.pos.data.api.MenuApi
+import com.kiwari.pos.data.api.OrderApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -149,5 +150,14 @@ object NetworkModule {
     @Singleton
     fun provideCustomerApi(retrofit: Retrofit): CustomerApi {
         return retrofit.create(CustomerApi::class.java)
+    }
+
+    /**
+     * OrderApi for order creation and payment endpoints (uses authenticated Retrofit).
+     */
+    @Provides
+    @Singleton
+    fun provideOrderApi(retrofit: Retrofit): OrderApi {
+        return retrofit.create(OrderApi::class.java)
     }
 }

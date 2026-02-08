@@ -7,6 +7,9 @@ import com.kiwari.pos.data.model.Customer
 import com.kiwari.pos.data.model.Result
 import com.kiwari.pos.data.repository.CartRepository
 import com.kiwari.pos.data.repository.CustomerRepository
+import com.kiwari.pos.data.repository.OrderMetadata
+import com.kiwari.pos.data.repository.OrderMetadataRepository
+import com.kiwari.pos.util.coerceAtLeast
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,7 +66,8 @@ data class CartUiState(
 @HiltViewModel
 class CartViewModel @Inject constructor(
     private val cartRepository: CartRepository,
-    private val customerRepository: CustomerRepository
+    private val customerRepository: CustomerRepository,
+    private val orderMetadataRepository: OrderMetadataRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CartUiState())
@@ -330,6 +334,7 @@ class CartViewModel @Inject constructor(
     /**
      * Validate before proceeding to payment.
      * Returns true if valid, false if there are validation errors.
+     * On success, saves order metadata to the shared repository for PaymentViewModel.
      */
     fun validateForPayment(): Boolean {
         val state = _uiState.value
@@ -337,6 +342,20 @@ class CartViewModel @Inject constructor(
             _uiState.update { it.copy(cateringCustomerError = true) }
             return false
         }
+        // Save order metadata for PaymentViewModel
+        orderMetadataRepository.setMetadata(
+            OrderMetadata(
+                orderType = state.orderType,
+                tableNumber = state.tableNumber,
+                customer = state.selectedCustomer,
+                discountType = state.discountType,
+                discountValue = state.discountValue,
+                discountAmount = state.discountAmount,
+                notes = state.orderNotes,
+                subtotal = state.subtotal,
+                total = state.total
+            )
+        )
         return true
     }
 
@@ -366,9 +385,5 @@ class CartViewModel @Inject constructor(
                 discountValue.min(subtotal)
             }
         }
-    }
-
-    private fun BigDecimal.coerceAtLeast(minimum: BigDecimal): BigDecimal {
-        return if (this < minimum) minimum else this
     }
 }

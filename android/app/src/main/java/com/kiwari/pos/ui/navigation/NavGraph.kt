@@ -1,13 +1,9 @@
 package com.kiwari.pos.ui.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -19,6 +15,7 @@ import com.kiwari.pos.ui.cart.CartScreen
 import com.kiwari.pos.ui.login.LoginScreen
 import com.kiwari.pos.ui.menu.CustomizationScreen
 import com.kiwari.pos.ui.menu.MenuScreen
+import com.kiwari.pos.ui.payment.PaymentScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -86,9 +83,16 @@ fun NavGraph(
         }
 
         composable(Screen.Payment.route) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Coming soon")
-            }
+            PaymentScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToMenu = {
+                    navController.navigate(Screen.Menu.route) {
+                        popUpTo(Screen.Menu.route) { inclusive = true }
+                    }
+                }
+            )
         }
 
         composable(
