@@ -15,6 +15,8 @@ import com.kiwari.pos.data.repository.OrderRepository
 import com.kiwari.pos.util.coerceAtLeast
 import com.kiwari.pos.util.filterDecimalInput
 import com.kiwari.pos.util.parseBigDecimal
+import com.kiwari.pos.util.printer.PrinterService
+import com.kiwari.pos.util.printer.ReceiptData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -59,7 +61,8 @@ data class PaymentUiState(
 class PaymentViewModel @Inject constructor(
     private val cartRepository: CartRepository,
     private val orderMetadataRepository: OrderMetadataRepository,
-    private val orderRepository: OrderRepository
+    private val orderRepository: OrderRepository,
+    private val printerService: PrinterService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PaymentUiState())
@@ -170,6 +173,15 @@ class PaymentViewModel @Inject constructor(
                             it.copy(isSubmitting = false, error = paymentError)
                         }
                     } else {
+                        // Trigger auto-print before clearing cart
+                        triggerAutoprint(
+                            orderNumber = orderResult.data.orderNumber,
+                            cartItems = state.cartItems,
+                            metadata = state.metadata,
+                            payments = state.payments,
+                            totalChange = state.totalChange
+                        )
+
                         // Success - clear cart and metadata
                         cartRepository.clearCart()
                         orderMetadataRepository.clear()
@@ -284,6 +296,41 @@ class PaymentViewModel @Inject constructor(
         }
 
         return null
+    }
+
+    private fun triggerAutoprint(
+        orderNumber: String,
+        cartItems: List<CartItem>,
+        metadata: OrderMetadata,
+        payments: List<PaymentEntry>,
+        totalChange: BigDecimal
+    ) {
+        val discountLabel = when {
+            metadata.discountType != null && metadata.discountValue.isNotBlank() -> {
+                if (metadata.discountType.name == "PERCENTAGE") "${metadata.discountValue}%" else metadata.discountValue
+            }
+            else -> null
+        }
+
+        val receiptData = ReceiptData(
+            outletName = "", // Filled from preferences by PrinterService
+            orderNumber = orderNumber,
+            orderType = metadata.orderType.name,
+            tableNumber = metadata.tableNumber,
+            cartItems = cartItems,
+            subtotal = metadata.subtotal,
+            discountLabel = discountLabel,
+            discountAmount = metadata.discountAmount,
+            total = metadata.total,
+            payments = payments,
+            changeAmount = totalChange,
+            orderNotes = metadata.notes
+        )
+
+        viewModelScope.launch {
+            printerService.printReceiptIfEnabled(receiptData)
+            printerService.printKitchenTicketIfEnabled(receiptData)
+        }
     }
 
     private fun recalculateTotals(state: PaymentUiState): PaymentUiState {

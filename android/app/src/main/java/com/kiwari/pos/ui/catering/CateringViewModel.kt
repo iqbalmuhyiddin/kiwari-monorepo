@@ -13,9 +13,12 @@ import com.kiwari.pos.data.repository.CartRepository
 import com.kiwari.pos.data.repository.OrderMetadata
 import com.kiwari.pos.data.repository.OrderMetadataRepository
 import com.kiwari.pos.data.repository.OrderRepository
+import com.kiwari.pos.ui.payment.PaymentEntry
 import com.kiwari.pos.ui.payment.PaymentMethod
 import com.kiwari.pos.util.filterDecimalInput
 import com.kiwari.pos.util.parseBigDecimal
+import com.kiwari.pos.util.printer.PrinterService
+import com.kiwari.pos.util.printer.ReceiptData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -60,7 +63,8 @@ data class CateringUiState(
 class CateringViewModel @Inject constructor(
     private val cartRepository: CartRepository,
     private val orderMetadataRepository: OrderMetadataRepository,
-    private val orderRepository: OrderRepository
+    private val orderRepository: OrderRepository,
+    private val printerService: PrinterService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CateringUiState())
@@ -157,7 +161,7 @@ class CateringViewModel @Inject constructor(
 
             if (orderId != null) {
                 // Retry payment only
-                orderNumber = "" // We don't have it, but won't need it on success path
+                orderNumber = state.orderNumber // Saved from first attempt
                 val paymentError = submitDpPayment(orderId, state)
                 if (paymentError != null) {
                     _uiState.update {
@@ -175,8 +179,8 @@ class CateringViewModel @Inject constructor(
                     is Result.Success -> {
                         val createdId = orderResult.data.id
                         orderNumber = orderResult.data.orderNumber
-                        // Save orderId to state BEFORE attempting payment
-                        _uiState.update { it.copy(createdOrderId = createdId) }
+                        // Save orderId and orderNumber to state BEFORE attempting payment
+                        _uiState.update { it.copy(createdOrderId = createdId, orderNumber = orderNumber) }
 
                         // Step 2: Add DP payment
                         val paymentError = submitDpPayment(createdId, state)
@@ -199,6 +203,9 @@ class CateringViewModel @Inject constructor(
                 }
             }
 
+            // Trigger auto-print before clearing cart
+            triggerAutoprint(state, orderNumber)
+
             // Success — clear cart and metadata
             cartRepository.clearCart()
             orderMetadataRepository.clear()
@@ -209,6 +216,41 @@ class CateringViewModel @Inject constructor(
                     orderNumber = orderNumber
                 )
             }
+        }
+    }
+
+    private fun triggerAutoprint(state: CateringUiState, orderNumber: String) {
+        val metadata = state.metadata
+        val discountLabel = when {
+            metadata.discountType != null && metadata.discountValue.isNotBlank() -> {
+                if (metadata.discountType.name == "PERCENTAGE") "${metadata.discountValue}%" else metadata.discountValue
+            }
+            else -> null
+        }
+
+        val receiptData = ReceiptData(
+            outletName = "", // Filled from preferences by PrinterService
+            orderNumber = orderNumber.ifBlank { "CATERING" },
+            orderType = metadata.orderType.name,
+            cartItems = state.cartItems,
+            subtotal = metadata.subtotal,
+            discountLabel = discountLabel,
+            discountAmount = metadata.discountAmount,
+            total = metadata.total,
+            payments = listOf(
+                PaymentEntry(
+                    method = state.paymentMethod,
+                    amount = state.paymentAmount
+                )
+            ),
+            orderNotes = state.notes,
+            isCatering = true,
+            dpAmount = state.dpAmount
+        )
+
+        viewModelScope.launch {
+            printerService.printReceiptIfEnabled(receiptData)
+            printerService.printKitchenTicketIfEnabled(receiptData)
         }
     }
 

@@ -3,6 +3,7 @@ package com.kiwari.pos.ui.menu
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,7 +42,8 @@ import com.kiwari.pos.ui.menu.components.QuickEditPopup
 fun MenuScreen(
     viewModel: MenuViewModel = hiltViewModel(),
     onNavigateToCart: () -> Unit = {},
-    onNavigateToCustomization: (productId: String) -> Unit = {}
+    onNavigateToCustomization: (productId: String) -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showSearch by remember { mutableStateOf(false) }
@@ -51,7 +54,7 @@ fun MenuScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Top bar with title and search
+            // Top bar with title, search, and settings
             MenuTopBar(
                 showSearch = showSearch,
                 searchQuery = uiState.searchQuery,
@@ -59,7 +62,8 @@ fun MenuScreen(
                 onToggleSearch = {
                     showSearch = !showSearch
                     if (!showSearch) viewModel.onSearchQueryChanged("")
-                }
+                },
+                onSettingsClick = onNavigateToSettings
             )
 
             when {
@@ -192,7 +196,8 @@ private fun MenuTopBar(
     showSearch: Boolean,
     searchQuery: String,
     onSearchQueryChanged: (String) -> Unit,
-    onToggleSearch: () -> Unit
+    onToggleSearch: () -> Unit,
+    onSettingsClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -233,14 +238,19 @@ private fun MenuTopBar(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                IconButton(
-                    onClick = onToggleSearch,
-                    modifier = Modifier.align(Alignment.CenterEnd)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Cari produk"
-                    )
+                Row(modifier = Modifier.align(Alignment.CenterEnd)) {
+                    IconButton(onClick = onToggleSearch) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Cari produk"
+                        )
+                    }
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Pengaturan printer"
+                        )
+                    }
                 }
             }
         }

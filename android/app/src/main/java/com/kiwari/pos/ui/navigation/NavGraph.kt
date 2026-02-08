@@ -17,6 +17,7 @@ import com.kiwari.pos.ui.login.LoginScreen
 import com.kiwari.pos.ui.menu.CustomizationScreen
 import com.kiwari.pos.ui.menu.MenuScreen
 import com.kiwari.pos.ui.payment.PaymentScreen
+import com.kiwari.pos.ui.settings.PrinterSettingsScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -27,6 +28,7 @@ sealed class Screen(val route: String) {
     object Customization : Screen("customization/{productId}") {
         fun createRoute(productId: String) = "customization/$productId"
     }
+    object Settings : Screen("settings")
 }
 
 @Composable
@@ -69,6 +71,9 @@ fun NavGraph(
                 },
                 onNavigateToCustomization = { productId ->
                     navController.navigate(Screen.Customization.createRoute(productId))
+                },
+                onNavigateToSettings = {
+                    navController.navigate(Screen.Settings.route)
                 }
             )
         }
@@ -118,6 +123,14 @@ fun NavGraph(
             arguments = listOf(navArgument("productId") { type = NavType.StringType })
         ) {
             CustomizationScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(Screen.Settings.route) {
+            PrinterSettingsScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 }
