@@ -140,16 +140,18 @@ The API runs a WebSocket hub per outlet at `/ws/outlets/{oid}/orders`. When an o
 
 Built with Kotlin + Jetpack Compose + Hilt DI. Single-activity architecture with Compose Navigation.
 
-### What's working
-- **Login**: Email/password or PIN. Tokens stored in `EncryptedSharedPreferences`. OkHttp interceptor auto-refreshes on 401.
-- **Menu screen**: Horizontal category chips at top, full-width product list below. Tap a simple product → instant add to cart. Tap a product with required variants → customization sheet slides up.
-- **Customization**: Radio buttons for variants (pick one per group), checkboxes for modifiers (pick many, respects min/max rules), quantity selector, notes field.
+### Screens (all complete)
+- **Login**: Email/password or PIN. Tokens in `EncryptedSharedPreferences`. OkHttp interceptor auto-refreshes on 401.
+- **Menu**: Horizontal category chips, full-width product list. Tap simple product → instant add. Tap product with variants → customization sheet.
+- **Customization**: Radio buttons for variants (pick one per group), checkboxes for modifiers (pick many, min/max rules), quantity selector, notes.
+- **Cart**: Order type chips (Dine-in/Takeaway/Delivery/Catering), table number, customer search with add-new dialog, discount section (percentage/fixed/none), subtotal/discount/total summary.
+- **Payment**: Multi-payment entries (CASH/QRIS/TRANSFER chips), cash change calc, running paid/remaining bar, two-step API flow (create order → add payments). Success screen with order number.
+- **Catering**: Customer display, Material3 DatePicker (future-only), delivery address, notes, 50% DP auto-calc, payment retry on orphaned order.
+- **Thermal printer**: Bluetooth ESC/POS, paired devices discovery, test print, paper width selection (58/80mm), auto-print toggle, receipt + kitchen ticket formatting.
+- **Settings**: Printer config accessible from menu screen gear icon.
 
-### What's pending
-- Cart screen (order type, discounts, customer lookup)
-- Payment screen (multi-payment, cash change calculation)
-- Catering booking flow
-- Thermal printer (Bluetooth ESC/POS)
+### Bold + Clean theme
+Redesigned mid-milestone. White backgrounds, tight radii (8-16dp), borders over shadows, green CTAs, yellow category accents. No dark theme. 9 color tokens, all via MaterialTheme.colorScheme.
 
 ### Dev setup quirk
 No Android Studio — CLI-only. JDK 17 via Homebrew, `android-commandlinetools` cask. Testing on a physical device over USB. Debug builds point API calls to your Mac's LAN IP (`http://192.168.x.x:8081/`), which requires `usesCleartextTraffic=true` in the manifest.
@@ -160,13 +162,13 @@ No Android Studio — CLI-only. JDK 17 via Homebrew, `android-commandlinetools` 
 
 SvelteKit 2 + Svelte 5 + Tailwind CSS v4. Server-side rendered with client-side hydration.
 
-### What's working
+### What's built so far
 
-**Authentication**: Login form → Go API `/auth/login` → JWT stored in httpOnly cookies (never accessible to JavaScript). Server hooks parse the JWT on every request, refresh proactively 30 seconds before expiry, and populate `event.locals.user`. Protected routes redirect to `/login` if unauthenticated.
+**Authentication** (Task 9.2): Login form → Go API `/auth/login` → JWT stored in 3 httpOnly cookies (access_token, refresh_token, user_info). Server hooks parse the JWT on every request, refresh proactively 30 seconds before expiry, and populate `event.locals.user`. Protected routes redirect to `/login` if unauthenticated. Open redirect protection on login redirects.
 
-**Dashboard**: Four KPI cards (revenue, orders, avg ticket, payment breakdown) + pure CSS hourly sales bar chart + live orders panel that polls every 10 seconds. All data loaded server-side via `+page.server.ts`, then the live orders component takes over with client-side polling.
+**Dashboard** (Task 9.3): Four KPI cards (revenue, orders, avg ticket, payment method breakdown) + pure CSS hourly sales bar chart (hours 6-22) + live active orders panel that polls every 10 seconds through a SvelteKit server endpoint. All data loaded server-side in parallel via `Promise.all` in `+page.server.ts`. Orders fetched with two parallel calls (one for NEW, one for PREPARING) because the Go API's status filter only accepts one value at a time.
 
-**Sidebar**: Navigation with role-based visibility — CASHIER and KITCHEN roles don't see Reports or Settings links.
+**Sidebar**: Navigation with role-based visibility — CASHIER and KITCHEN roles don't see Reports or Settings links. User info footer with initials avatar, name, and role.
 
 ### What's pending
 - Menu management (CRUD for categories, products, variants, modifiers)
@@ -174,6 +176,7 @@ SvelteKit 2 + Svelte 5 + Tailwind CSS v4. Server-side rendered with client-side 
 - Customer CRM (search, stats, order history)
 - Reports with charts and CSV export
 - Settings (tax, receipt template, user management)
+- Outlet selector for Owner role (needs outlets list API endpoint)
 
 ### Architecture decisions
 
@@ -271,13 +274,13 @@ Each worktree is a fully independent checkout. You can have the API running from
 | 3 | Menu management API | Done | Full CRUD for categories, products, variants, modifiers, combos |
 | 4 | Orders & payments API | Done | Create, update status, cancel, multi-payment |
 | 5 | CRM, reports, WebSocket | Done | Customers, 5 report types, live order broadcast |
-| 6 | Router assembly & integration test | Done | Full lifecycle test passing |
+| 6 | Router assembly & integration test | Done | Full lifecycle test with real PostgreSQL |
 | 7 | Docker production setup | Done | Compose files, Dockerfiles, backup script |
-| 8 | Android POS app | ~69% | Login, menu, customization done. Cart, payment, catering, printer pending. |
-| 9 | SvelteKit admin panel | ~33% | Auth, dashboard done. Menu, orders, CRM, reports, settings pending. |
-| 10 | Deployment & seed script | Not started | Final production deployment |
+| 8 | Android POS app | Done | 8 screens + theme redesign. 100 files, 10,384 lines. |
+| 9 | SvelteKit admin panel | ~38% | Scaffold, auth, dashboard done. 5 pages pending (menu, orders, CRM, reports, settings). |
+| 10 | Deployment & seed script | Done | CI/CD pipeline, VPS deploy, seed script. v1.0.0 deployed. |
 
-**Backend is 100% complete and production-ready.** The two client apps are what's left.
+**Backend + Android + CI/CD are complete.** The admin panel (M9) is the final milestone.
 
 ---
 
@@ -300,6 +303,15 @@ Tailwind v4 uses `@theme` for design token registration instead of `tailwind.con
 
 ### Price as string, not number
 The Go API returns monetary amounts as strings (because `decimal(12,2)` → `shopspring/decimal` → JSON string). Both the admin and Android app must parse these strings, never assume they're numbers. `formatRupiah()` in the admin handles this by parsing to float then formatting with `toLocaleString('id-ID')`.
+
+### JWT payload ≠ login response
+The Go API's JWT access token only contains `user_id`, `outlet_id`, `role`, `exp`, `iat`. It does NOT contain `email` or `full_name` — those fields only come in the `/auth/login` response body. The admin works around this with a supplementary `user_info` httpOnly cookie that stores the fields missing from the JWT. If you ever change the JWT claims in Go, check all three places: Go `auth/jwt.go`, Android `TokenRepository`, and SvelteKit `hooks.server.ts`.
+
+### Go API list responses are wrapped
+Order list endpoints return `{orders: [...], limit, offset}` — not a bare array. Every SvelteKit page consuming list endpoints needs to unwrap. If you forget, things silently break (an object isn't iterable).
+
+### Go query params: one value per key
+`r.URL.Query().Get("key")` returns only the first value. `?status=NEW&status=PREPARING` won't give you both — only `NEW`. To filter by multiple statuses, make separate API calls and merge results client-side.
 
 ---
 

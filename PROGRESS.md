@@ -7,7 +7,7 @@ Tracking execution of the implementation plan (split into three files):
 
 ## Active Branch
 
-`feature/milestone-8-android-pos` in `.worktrees/milestone-8-android-pos/` (7 commits ahead of main)
+`feature/milestone-9-sveltekit-admin` in `.worktrees/milestone-9-sveltekit-admin/` (4 commits ahead of main)
 
 ## Milestones
 
