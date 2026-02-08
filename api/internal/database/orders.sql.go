@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -410,6 +411,100 @@ func (q *Queries) GetVariantForOrder(ctx context.Context, id uuid.UUID) (GetVari
 		&i.ProductID,
 	)
 	return i, err
+}
+
+const listActiveOrders = `-- name: ListActiveOrders :many
+SELECT o.id, o.outlet_id, o.order_number, o.customer_id, o.order_type, o.status, o.table_number, o.notes, o.subtotal, o.discount_type, o.discount_value, o.discount_amount, o.tax_amount, o.total_amount, o.catering_date, o.catering_status, o.catering_dp_amount, o.delivery_platform, o.delivery_address, o.created_by, o.created_at, o.updated_at, o.completed_at,
+       COALESCE(
+         (SELECT SUM(p.amount) FROM payments p WHERE p.order_id = o.id AND p.status = 'COMPLETED'),
+         0
+       )::decimal(12,2) AS amount_paid
+FROM orders o
+WHERE o.outlet_id = $1
+  AND (
+    o.status IN ('NEW', 'PREPARING', 'READY')
+    OR (o.order_type = 'CATERING' AND o.catering_status IN ('BOOKED', 'DP_PAID'))
+  )
+ORDER BY o.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListActiveOrdersParams struct {
+	OutletID uuid.UUID `json:"outlet_id"`
+	Limit    int32     `json:"limit"`
+	Offset   int32     `json:"offset"`
+}
+
+type ListActiveOrdersRow struct {
+	ID               uuid.UUID          `json:"id"`
+	OutletID         uuid.UUID          `json:"outlet_id"`
+	OrderNumber      string             `json:"order_number"`
+	CustomerID       pgtype.UUID        `json:"customer_id"`
+	OrderType        OrderType          `json:"order_type"`
+	Status           OrderStatus        `json:"status"`
+	TableNumber      pgtype.Text        `json:"table_number"`
+	Notes            pgtype.Text        `json:"notes"`
+	Subtotal         pgtype.Numeric     `json:"subtotal"`
+	DiscountType     NullDiscountType   `json:"discount_type"`
+	DiscountValue    pgtype.Numeric     `json:"discount_value"`
+	DiscountAmount   pgtype.Numeric     `json:"discount_amount"`
+	TaxAmount        pgtype.Numeric     `json:"tax_amount"`
+	TotalAmount      pgtype.Numeric     `json:"total_amount"`
+	CateringDate     pgtype.Timestamptz `json:"catering_date"`
+	CateringStatus   NullCateringStatus `json:"catering_status"`
+	CateringDpAmount pgtype.Numeric     `json:"catering_dp_amount"`
+	DeliveryPlatform pgtype.Text        `json:"delivery_platform"`
+	DeliveryAddress  pgtype.Text        `json:"delivery_address"`
+	CreatedBy        uuid.UUID          `json:"created_by"`
+	CreatedAt        time.Time          `json:"created_at"`
+	UpdatedAt        time.Time          `json:"updated_at"`
+	CompletedAt      pgtype.Timestamptz `json:"completed_at"`
+	AmountPaid       pgtype.Numeric     `json:"amount_paid"`
+}
+
+func (q *Queries) ListActiveOrders(ctx context.Context, arg ListActiveOrdersParams) ([]ListActiveOrdersRow, error) {
+	rows, err := q.db.Query(ctx, listActiveOrders, arg.OutletID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListActiveOrdersRow{}
+	for rows.Next() {
+		var i ListActiveOrdersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OutletID,
+			&i.OrderNumber,
+			&i.CustomerID,
+			&i.OrderType,
+			&i.Status,
+			&i.TableNumber,
+			&i.Notes,
+			&i.Subtotal,
+			&i.DiscountType,
+			&i.DiscountValue,
+			&i.DiscountAmount,
+			&i.TaxAmount,
+			&i.TotalAmount,
+			&i.CateringDate,
+			&i.CateringStatus,
+			&i.CateringDpAmount,
+			&i.DeliveryPlatform,
+			&i.DeliveryAddress,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CompletedAt,
+			&i.AmountPaid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listOrderItemModifiersByOrderItem = `-- name: ListOrderItemModifiersByOrderItem :many

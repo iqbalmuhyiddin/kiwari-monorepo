@@ -31,6 +31,7 @@ type OrderServicer interface {
 type OrderStore interface {
 	GetOrder(ctx context.Context, arg database.GetOrderParams) (database.Order, error)
 	ListOrders(ctx context.Context, arg database.ListOrdersParams) ([]database.Order, error)
+	ListActiveOrders(ctx context.Context, arg database.ListActiveOrdersParams) ([]database.ListActiveOrdersRow, error)
 	ListOrderItemsByOrder(ctx context.Context, orderID uuid.UUID) ([]database.OrderItem, error)
 	ListOrderItemModifiersByOrderItem(ctx context.Context, orderItemID uuid.UUID) ([]database.OrderItemModifier, error)
 	ListPaymentsByOrder(ctx context.Context, orderID uuid.UUID) ([]database.Payment, error)
@@ -73,6 +74,7 @@ func NewOrderHandler(svc OrderServicer, store OrderStore, pool service.TxBeginne
 func (h *OrderHandler) RegisterRoutes(r chi.Router) {
 	r.Post("/", h.Create)
 	r.Get("/", h.List)
+	r.Get("/active", h.ListActive)
 	r.Route("/{id}", func(r chi.Router) {
 		r.Get("/", h.Get)
 		r.Patch("/status", h.UpdateStatus)
@@ -190,6 +192,19 @@ type orderListResponse struct {
 	Orders []orderResponse `json:"orders"`
 	Limit  int             `json:"limit"`
 	Offset int             `json:"offset"`
+}
+
+// activeOrderResponse extends orderResponse with amount_paid for the active orders endpoint.
+type activeOrderResponse struct {
+	orderResponse
+	AmountPaid string `json:"amount_paid"`
+}
+
+// activeOrderListResponse wraps a list of active orders with pagination metadata.
+type activeOrderListResponse struct {
+	Orders []activeOrderResponse `json:"orders"`
+	Limit  int                   `json:"limit"`
+	Offset int                   `json:"offset"`
 }
 
 type updateStatusRequest struct {
@@ -388,6 +403,64 @@ func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, orderListResponse{
+		Orders: resp,
+		Limit:  limit,
+		Offset: offset,
+	})
+}
+
+// ListActive handles GET /outlets/{oid}/orders/active.
+func (h *OrderHandler) ListActive(w http.ResponseWriter, r *http.Request) {
+	outletID, err := uuid.Parse(chi.URLParam(r, "oid"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid outlet ID"})
+		return
+	}
+
+	claims := middleware.ClaimsFromContext(r.Context())
+	if claims == nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "not authenticated"})
+		return
+	}
+
+	// Parse pagination
+	limit := 50
+	if s := r.URL.Query().Get("limit"); s != "" {
+		if v, err := strconv.Atoi(s); err == nil && v > 0 {
+			limit = v
+		}
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	offset := 0
+	if s := r.URL.Query().Get("offset"); s != "" {
+		if v, err := strconv.Atoi(s); err == nil && v >= 0 {
+			offset = v
+		}
+	}
+
+	rows, err := h.store.ListActiveOrders(r.Context(), database.ListActiveOrdersParams{
+		OutletID: outletID,
+		Limit:    int32(limit),
+		Offset:   int32(offset),
+	})
+	if err != nil {
+		log.Printf("ERROR: list active orders: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+
+	resp := make([]activeOrderResponse, len(rows))
+	for i, row := range rows {
+		resp[i] = activeOrderResponse{
+			orderResponse: dbOrderToResponse(activeOrderRowToOrder(row)),
+			AmountPaid:    numericToString(row.AmountPaid),
+		}
+	}
+
+	writeJSON(w, http.StatusOK, activeOrderListResponse{
 		Orders: resp,
 		Limit:  limit,
 		Offset: offset,
@@ -1263,6 +1336,36 @@ func (h *OrderHandler) UpdateItemStatus(w http.ResponseWriter, r *http.Request) 
 }
 
 // --- Helpers ---
+
+// activeOrderRowToOrder converts a ListActiveOrdersRow to a database.Order
+// so we can reuse dbOrderToResponse.
+func activeOrderRowToOrder(row database.ListActiveOrdersRow) database.Order {
+	return database.Order{
+		ID:               row.ID,
+		OutletID:         row.OutletID,
+		OrderNumber:      row.OrderNumber,
+		CustomerID:       row.CustomerID,
+		OrderType:        row.OrderType,
+		Status:           row.Status,
+		TableNumber:      row.TableNumber,
+		Notes:            row.Notes,
+		Subtotal:         row.Subtotal,
+		DiscountType:     row.DiscountType,
+		DiscountValue:    row.DiscountValue,
+		DiscountAmount:   row.DiscountAmount,
+		TaxAmount:        row.TaxAmount,
+		TotalAmount:      row.TotalAmount,
+		CateringDate:     row.CateringDate,
+		CateringStatus:   row.CateringStatus,
+		CateringDpAmount: row.CateringDpAmount,
+		DeliveryPlatform: row.DeliveryPlatform,
+		DeliveryAddress:  row.DeliveryAddress,
+		CreatedBy:        row.CreatedBy,
+		CompletedAt:      row.CompletedAt,
+		CreatedAt:        row.CreatedAt,
+		UpdatedAt:        row.UpdatedAt,
+	}
+}
 
 func formatItemError(idx int, msg string) string {
 	return "items[" + strconv.Itoa(idx) + "]: " + msg
