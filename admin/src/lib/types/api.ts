@@ -43,10 +43,24 @@ export interface HourlySales {
 	total_revenue: string;
 }
 
+export interface ProductSales {
+	product_id: string;
+	product_name: string;
+	quantity_sold: number;
+	total_revenue: string;
+}
+
 export interface PaymentSummary {
 	payment_method: string;
 	transaction_count: number;
 	total_amount: string;
+}
+
+export interface OutletComparison {
+	outlet_id: string;
+	outlet_name: string;
+	order_count: number;
+	total_revenue: string;
 }
 
 export interface ActiveOrderItem {
