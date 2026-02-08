@@ -122,6 +122,7 @@ fun PaymentScreen(
                 remaining = uiState.remaining,
                 totalChange = uiState.totalChange,
                 orderTotal = uiState.metadata.total,
+                isMultiPayment = uiState.isMultiPayment,
                 isSubmitting = uiState.isSubmitting,
                 canSubmit = uiState.remaining.compareTo(BigDecimal.ZERO) == 0 && !uiState.isSubmitting,
                 onSubmit = viewModel::onSubmitOrder
@@ -202,7 +203,9 @@ fun PaymentScreen(
             ) { entry ->
                 PaymentEntryCard(
                     entry = entry,
+                    isMultiPayment = uiState.isMultiPayment,
                     showRemoveButton = uiState.payments.size > 1,
+                    orderTotal = uiState.metadata.total,
                     onMethodChanged = { method ->
                         viewModel.onPaymentMethodChanged(entry.id, method)
                     },
@@ -348,7 +351,9 @@ private fun OrderTotalSection(
 @Composable
 private fun PaymentEntryCard(
     entry: PaymentEntry,
+    isMultiPayment: Boolean,
     showRemoveButton: Boolean,
+    orderTotal: BigDecimal,
     onMethodChanged: (PaymentMethod) -> Unit,
     onAmountChanged: (String) -> Unit,
     onAmountReceivedChanged: (String) -> Unit,
@@ -426,27 +431,28 @@ private fun PaymentEntryCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // Amount field — only shown in multi-payment mode
+            if (isMultiPayment) {
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = entry.amount,
+                    onValueChange = onAmountChanged,
+                    label = { Text("Jumlah") },
+                    prefix = { Text("Rp ") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.extraSmall,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
+            }
 
-            // Amount field
-            OutlinedTextField(
-                value = entry.amount,
-                onValueChange = onAmountChanged,
-                label = { Text("Jumlah") },
-                prefix = { Text("Rp ") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraSmall,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-            )
-
-            // Cash-specific: amount received
+            // Cash-specific: amount received (optional — for change calculation)
             if (entry.method == PaymentMethod.CASH) {
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = entry.amountReceived,
                     onValueChange = onAmountReceivedChanged,
-                    label = { Text("Uang Diterima") },
+                    label = { Text("Uang Diterima (opsional)") },
                     prefix = { Text("Rp ") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -455,9 +461,13 @@ private fun PaymentEntryCard(
                 )
 
                 // Show change calculation
-                val amount = try { BigDecimal(entry.amount) } catch (e: NumberFormatException) { BigDecimal.ZERO }
-                val received = try { BigDecimal(entry.amountReceived) } catch (e: NumberFormatException) { BigDecimal.ZERO }
-                if (received > amount && amount > BigDecimal.ZERO) {
+                val paymentAmount = if (isMultiPayment) {
+                    try { BigDecimal(entry.amount) } catch (_: NumberFormatException) { BigDecimal.ZERO }
+                } else {
+                    orderTotal
+                }
+                val received = try { BigDecimal(entry.amountReceived) } catch (_: NumberFormatException) { BigDecimal.ZERO }
+                if (received > paymentAmount && paymentAmount > BigDecimal.ZERO) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -470,7 +480,7 @@ private fun PaymentEntryCard(
                             fontWeight = FontWeight.Medium
                         )
                         Text(
-                            text = formatPrice(received.subtract(amount)),
+                            text = formatPrice(received.subtract(paymentAmount)),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold
@@ -485,7 +495,7 @@ private fun PaymentEntryCard(
                 OutlinedTextField(
                     value = entry.referenceNumber,
                     onValueChange = onReferenceChanged,
-                    label = { Text("Nomor Referensi") },
+                    label = { Text("Nomor Referensi (opsional)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.extraSmall
@@ -501,6 +511,7 @@ private fun PaymentBottomSection(
     remaining: BigDecimal,
     totalChange: BigDecimal,
     orderTotal: BigDecimal,
+    isMultiPayment: Boolean,
     isSubmitting: Boolean,
     canSubmit: Boolean,
     onSubmit: () -> Unit
@@ -532,44 +543,47 @@ private fun PaymentBottomSection(
                 )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Total paid
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Terbayar",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = formatPrice(totalPaid),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            // Remaining
-            if (remaining > BigDecimal.ZERO) {
+            // Only show paid/remaining breakdown in multi-payment mode
+            if (isMultiPayment) {
                 Spacer(modifier = Modifier.height(4.dp))
+
+                // Total paid
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "Sisa",
+                        text = "Terbayar",
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = formatPrice(remaining),
+                        text = formatPrice(totalPaid),
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.onSurface
                     )
+                }
+
+                // Remaining
+                if (remaining > BigDecimal.ZERO) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Sisa",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Text(
+                            text = formatPrice(remaining),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
 
@@ -581,7 +595,7 @@ private fun PaymentBottomSection(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "Total Kembalian",
+                        text = "Kembalian",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary

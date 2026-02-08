@@ -43,6 +43,8 @@ data class PaymentUiState(
     // Order summary (from metadata + cart)
     val cartItems: List<CartItem> = emptyList(),
     val metadata: OrderMetadata = OrderMetadata(),
+    // Payment mode: single (default) vs multi (opt-in via "+ Tambah")
+    val isMultiPayment: Boolean = false,
     // Payment entries
     val payments: List<PaymentEntry> = listOf(PaymentEntry()),
     // Calculated totals
@@ -79,7 +81,9 @@ class PaymentViewModel @Inject constructor(
             it.copy(
                 cartItems = cartItems,
                 metadata = metadata,
-                remaining = metadata.total
+                // Single payment mode: paid = total, remaining = 0
+                totalPaid = metadata.total,
+                remaining = BigDecimal.ZERO
             )
         }
     }
@@ -87,7 +91,7 @@ class PaymentViewModel @Inject constructor(
     fun onAddPayment() {
         _uiState.update { state ->
             val updatedPayments = state.payments + PaymentEntry()
-            recalculateTotals(state.copy(payments = updatedPayments))
+            recalculateTotals(state.copy(payments = updatedPayments, isMultiPayment = true))
         }
     }
 
@@ -96,7 +100,9 @@ class PaymentViewModel @Inject constructor(
             val updatedPayments = state.payments.filter { it.id != paymentId }
             // Always keep at least one payment entry
             val finalPayments = if (updatedPayments.isEmpty()) listOf(PaymentEntry()) else updatedPayments
-            recalculateTotals(state.copy(payments = finalPayments))
+            // Revert to single mode when back to 1 entry
+            val isMulti = finalPayments.size > 1
+            recalculateTotals(state.copy(payments = finalPayments, isMultiPayment = isMulti))
         }
     }
 
@@ -167,7 +173,7 @@ class PaymentViewModel @Inject constructor(
                 is Result.Success -> {
                     val orderId = orderResult.data.id
                     // Step 2: Add payments one by one
-                    val paymentError = submitPayments(orderId, state.payments)
+                    val paymentError = submitPayments(orderId, state)
                     if (paymentError != null) {
                         _uiState.update {
                             it.copy(isSubmitting = false, error = paymentError)
@@ -203,9 +209,14 @@ class PaymentViewModel @Inject constructor(
         }
     }
 
-    private suspend fun submitPayments(orderId: String, payments: List<PaymentEntry>): String? {
-        for (entry in payments) {
-            val amount = parseBigDecimal(entry.amount)
+    private suspend fun submitPayments(orderId: String, state: PaymentUiState): String? {
+        for (entry in state.payments) {
+            // In single mode, amount is the full order total
+            val amount = if (state.isMultiPayment) {
+                parseBigDecimal(entry.amount)
+            } else {
+                state.metadata.total
+            }
             if (amount <= BigDecimal.ZERO) continue
 
             val request = AddPaymentRequest(
@@ -263,34 +274,45 @@ class PaymentViewModel @Inject constructor(
     }
 
     private fun validatePayments(state: PaymentUiState): String? {
-        val nonEmptyPayments = state.payments.filter {
-            parseBigDecimal(it.amount) > BigDecimal.ZERO
-        }
+        if (state.isMultiPayment) {
+            // Multi-payment: validate amounts per entry
+            val nonEmptyPayments = state.payments.filter {
+                parseBigDecimal(it.amount) > BigDecimal.ZERO
+            }
 
-        if (nonEmptyPayments.isEmpty()) {
-            return "Tambahkan minimal satu pembayaran"
-        }
+            if (nonEmptyPayments.isEmpty()) {
+                return "Tambahkan minimal satu pembayaran"
+            }
 
-        val totalPaid = nonEmptyPayments.fold(BigDecimal.ZERO) { acc, entry ->
-            acc.add(parseBigDecimal(entry.amount))
-        }
+            val totalPaid = nonEmptyPayments.fold(BigDecimal.ZERO) { acc, entry ->
+                acc.add(parseBigDecimal(entry.amount))
+            }
 
-        // Validate total payment doesn't exceed order total
-        if (totalPaid.compareTo(state.metadata.total) > 0) {
-            return "Total pembayaran melebihi total pesanan"
-        }
+            if (totalPaid.compareTo(state.metadata.total) > 0) {
+                return "Total pembayaran melebihi total pesanan"
+            }
 
-        if (totalPaid.compareTo(state.metadata.total) < 0) {
-            return "Total pembayaran belum mencukupi"
-        }
+            if (totalPaid.compareTo(state.metadata.total) < 0) {
+                return "Total pembayaran belum mencukupi"
+            }
 
-        // Validate cash entries: amount_received must >= amount
-        for (entry in nonEmptyPayments) {
+            // Validate cash entries: amount_received must >= amount
+            for (entry in nonEmptyPayments) {
+                if (entry.method == PaymentMethod.CASH) {
+                    val amount = parseBigDecimal(entry.amount)
+                    val received = parseBigDecimal(entry.amountReceived)
+                    if (received > BigDecimal.ZERO && received < amount) {
+                        return "Uang diterima harus >= jumlah pembayaran tunai"
+                    }
+                }
+            }
+        } else {
+            // Single payment: amount is the full total, just validate cash received
+            val entry = state.payments.first()
             if (entry.method == PaymentMethod.CASH) {
-                val amount = parseBigDecimal(entry.amount)
                 val received = parseBigDecimal(entry.amountReceived)
-                if (received > BigDecimal.ZERO && received < amount) {
-                    return "Uang diterima harus >= jumlah pembayaran tunai"
+                if (received > BigDecimal.ZERO && received < state.metadata.total) {
+                    return "Uang diterima harus >= total pesanan"
                 }
             }
         }
@@ -334,26 +356,43 @@ class PaymentViewModel @Inject constructor(
     }
 
     private fun recalculateTotals(state: PaymentUiState): PaymentUiState {
-        val totalPaid = state.payments.fold(BigDecimal.ZERO) { acc, entry ->
-            acc.add(parseBigDecimal(entry.amount))
-        }
-        val remaining = state.metadata.total.subtract(totalPaid).coerceAtLeast(BigDecimal.ZERO)
-
-        // Calculate total change across all cash entries
-        val totalChange = state.payments
-            .filter { it.method == PaymentMethod.CASH }
-            .fold(BigDecimal.ZERO) { acc, entry ->
-                val amount = parseBigDecimal(entry.amount)
-                val received = parseBigDecimal(entry.amountReceived)
-                if (received > amount) {
-                    acc.add(received.subtract(amount))
-                } else acc
+        if (state.isMultiPayment) {
+            // Multi-payment: sum amounts from each entry
+            val totalPaid = state.payments.fold(BigDecimal.ZERO) { acc, entry ->
+                acc.add(parseBigDecimal(entry.amount))
             }
+            val remaining = state.metadata.total.subtract(totalPaid).coerceAtLeast(BigDecimal.ZERO)
 
-        return state.copy(
-            totalPaid = totalPaid,
-            remaining = remaining,
-            totalChange = totalChange
-        )
+            val totalChange = state.payments
+                .filter { it.method == PaymentMethod.CASH }
+                .fold(BigDecimal.ZERO) { acc, entry ->
+                    val amount = parseBigDecimal(entry.amount)
+                    val received = parseBigDecimal(entry.amountReceived)
+                    if (received > amount) {
+                        acc.add(received.subtract(amount))
+                    } else acc
+                }
+
+            return state.copy(
+                totalPaid = totalPaid,
+                remaining = remaining,
+                totalChange = totalChange
+            )
+        } else {
+            // Single payment: amount is always the full total
+            val entry = state.payments.first()
+            val totalChange = if (entry.method == PaymentMethod.CASH) {
+                val received = parseBigDecimal(entry.amountReceived)
+                if (received > state.metadata.total) {
+                    received.subtract(state.metadata.total)
+                } else BigDecimal.ZERO
+            } else BigDecimal.ZERO
+
+            return state.copy(
+                totalPaid = state.metadata.total,
+                remaining = BigDecimal.ZERO,
+                totalChange = totalChange
+            )
+        }
     }
 }
