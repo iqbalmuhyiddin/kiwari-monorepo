@@ -1,16 +1,12 @@
 package com.kiwari.pos.ui.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -34,6 +30,8 @@ import com.kiwari.pos.ui.menuadmin.ProductDetailScreen
 import com.kiwari.pos.ui.menuadmin.ProductListScreen
 import com.kiwari.pos.ui.reports.ReportsScreen
 import com.kiwari.pos.ui.settings.PrinterSettingsScreen
+import com.kiwari.pos.ui.staff.StaffFormScreen
+import com.kiwari.pos.ui.staff.StaffListScreen
 import com.kiwari.pos.util.DrawerFeature
 import kotlinx.coroutines.launch
 
@@ -76,6 +74,10 @@ sealed class Screen(val route: String) {
         }
     }
     object StaffList : Screen("staff")
+    object StaffForm : Screen("staff/{userId}") {
+        fun createRoute(userId: String) = "staff/$userId"
+        fun createNewRoute() = "staff/new"
+    }
 }
 
 @Composable
@@ -363,12 +365,29 @@ fun NavGraph(
             }
 
             composable(Screen.StaffList.route) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Coming soon")
-                }
+                StaffListScreen(
+                    onStaffClick = { staffId ->
+                        navController.navigate(Screen.StaffForm.createRoute(staffId)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onCreateClick = {
+                        navController.navigate(Screen.StaffForm.createNewRoute()) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Screen.StaffForm.route,
+                arguments = listOf(navArgument("userId") { type = NavType.StringType })
+            ) {
+                StaffFormScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onSaveSuccess = { navController.popBackStack() }
+                )
             }
         }
     }

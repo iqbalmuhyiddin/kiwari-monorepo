@@ -9,6 +9,7 @@ import com.kiwari.pos.data.api.MenuAdminApi
 import com.kiwari.pos.data.api.MenuApi
 import com.kiwari.pos.data.api.OrderApi
 import com.kiwari.pos.data.api.ReportApi
+import com.kiwari.pos.data.api.UserApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -179,5 +180,14 @@ object NetworkModule {
     @Singleton
     fun provideMenuAdminApi(retrofit: Retrofit): MenuAdminApi {
         return retrofit.create(MenuAdminApi::class.java)
+    }
+
+    /**
+     * UserApi for staff management endpoints (uses authenticated Retrofit).
+     */
+    @Provides
+    @Singleton
+    fun provideUserApi(retrofit: Retrofit): UserApi {
+        return retrofit.create(UserApi::class.java)
     }
 }
