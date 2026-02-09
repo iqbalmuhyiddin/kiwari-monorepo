@@ -6,7 +6,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.kiwari.pos.data.repository.TokenRepository
@@ -27,11 +29,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             KiwariTheme {
                 val navController = rememberNavController()
+                val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavGraph(
                         navController = navController,
                         tokenRepository = tokenRepository,
+                        drawerState = drawerState,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }

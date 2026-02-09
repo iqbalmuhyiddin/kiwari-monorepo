@@ -13,9 +13,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,8 +43,7 @@ fun MenuScreen(
     viewModel: MenuViewModel = hiltViewModel(),
     onNavigateToCart: () -> Unit = {},
     onNavigateToCustomization: (productId: String) -> Unit = {},
-    onNavigateToSettings: () -> Unit = {},
-    onNavigateToOrderList: () -> Unit = {}
+    onMenuClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showSearch by remember { mutableStateOf(false) }
@@ -56,7 +54,7 @@ fun MenuScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Top bar with title, search, and settings
+            // Top bar with hamburger menu, title, and search
             MenuTopBar(
                 showSearch = showSearch,
                 searchQuery = uiState.searchQuery,
@@ -65,8 +63,7 @@ fun MenuScreen(
                     showSearch = !showSearch
                     if (!showSearch) viewModel.onSearchQueryChanged("")
                 },
-                onSettingsClick = onNavigateToSettings,
-                onOrderListClick = onNavigateToOrderList
+                onMenuClick = onMenuClick
             )
 
             when {
@@ -200,8 +197,7 @@ private fun MenuTopBar(
     searchQuery: String,
     onSearchQueryChanged: (String) -> Unit,
     onToggleSearch: () -> Unit,
-    onSettingsClick: () -> Unit = {},
-    onOrderListClick: () -> Unit = {}
+    onMenuClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -232,35 +228,28 @@ private fun MenuTopBar(
                 }
             )
         } else {
-            Box(
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.CenterStart
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                IconButton(onClick = onMenuClick) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Buka menu navigasi"
+                    )
+                }
                 Text(
                     text = "Menu",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
                 )
-                Row(modifier = Modifier.align(Alignment.CenterEnd)) {
-                    IconButton(onClick = onToggleSearch) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Cari produk"
-                        )
-                    }
-                    IconButton(onClick = onOrderListClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Default.List,
-                            contentDescription = "Pesanan aktif"
-                        )
-                    }
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Pengaturan printer"
-                        )
-                    }
+                IconButton(onClick = onToggleSearch) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Cari produk"
+                    )
                 }
             }
         }
