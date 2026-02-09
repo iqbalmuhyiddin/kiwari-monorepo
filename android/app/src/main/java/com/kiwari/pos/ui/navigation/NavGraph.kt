@@ -27,6 +27,7 @@ import com.kiwari.pos.ui.menu.MenuScreen
 import com.kiwari.pos.ui.orders.OrderDetailScreen
 import com.kiwari.pos.ui.orders.OrderListScreen
 import com.kiwari.pos.ui.payment.PaymentScreen
+import com.kiwari.pos.ui.reports.ReportsScreen
 import com.kiwari.pos.ui.settings.PrinterSettingsScreen
 import com.kiwari.pos.util.DrawerFeature
 import kotlinx.coroutines.launch
@@ -257,12 +258,7 @@ fun NavGraph(
 
             // Placeholder screens for new drawer destinations
             composable(Screen.Reports.route) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Coming soon")
-                }
+                ReportsScreen(onNavigateBack = { navController.popBackStack() })
             }
 
             composable(Screen.MenuAdmin.route) {
