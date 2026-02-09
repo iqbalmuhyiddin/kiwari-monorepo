@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder
 import com.kiwari.pos.BuildConfig
 import com.kiwari.pos.data.api.AuthApi
 import com.kiwari.pos.data.api.CustomerApi
+import com.kiwari.pos.data.api.MenuAdminApi
 import com.kiwari.pos.data.api.MenuApi
 import com.kiwari.pos.data.api.OrderApi
 import com.kiwari.pos.data.api.ReportApi
@@ -169,5 +170,14 @@ object NetworkModule {
     @Singleton
     fun provideReportApi(retrofit: Retrofit): ReportApi {
         return retrofit.create(ReportApi::class.java)
+    }
+
+    /**
+     * MenuAdminApi for menu CRUD endpoints (uses authenticated Retrofit).
+     */
+    @Provides
+    @Singleton
+    fun provideMenuAdminApi(retrofit: Retrofit): MenuAdminApi {
+        return retrofit.create(MenuAdminApi::class.java)
     }
 }
