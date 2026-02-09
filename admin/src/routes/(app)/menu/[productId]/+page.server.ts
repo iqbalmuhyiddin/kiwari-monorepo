@@ -55,6 +55,12 @@ export const load: PageServerLoad = async ({ params, locals, cookies }) => {
 	]);
 
 	if (!productResult.ok) {
+		if (productResult.status === 401) {
+			cookies.delete('access_token', { path: '/' });
+			cookies.delete('refresh_token', { path: '/' });
+			cookies.delete('user_info', { path: '/' });
+			redirect(302, '/login');
+		}
 		redirect(302, '/menu');
 	}
 

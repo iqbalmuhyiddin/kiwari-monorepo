@@ -5,7 +5,7 @@
  * Form actions handle category create/edit/delete and product delete (soft).
  */
 
-import { fail } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 import { apiRequest } from '$lib/server/api';
 import type { Category, Product } from '$lib/types/api';
 import type { Actions, PageServerLoad } from './$types';
@@ -20,9 +20,26 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
 		apiRequest<Product[]>(`/outlets/${oid}/products`, { accessToken })
 	]);
 
+	// If both fail with auth error, session is stale — force re-login
+	if (!categoriesResult.ok && !productsResult.ok && (categoriesResult.status === 401 || productsResult.status === 401)) {
+		cookies.delete('access_token', { path: '/' });
+		cookies.delete('refresh_token', { path: '/' });
+		cookies.delete('user_info', { path: '/' });
+		redirect(302, '/login');
+	}
+
+	// Surface API errors so they're visible in the UI
+	let loadError: string | null = null;
+	if (!productsResult.ok) {
+		loadError = `Gagal memuat produk: ${productsResult.message}`;
+	} else if (!categoriesResult.ok) {
+		loadError = `Gagal memuat kategori: ${categoriesResult.message}`;
+	}
+
 	return {
 		categories: categoriesResult.ok ? categoriesResult.data : [],
-		products: productsResult.ok ? productsResult.data : []
+		products: productsResult.ok ? productsResult.data : [],
+		loadError
 	};
 };
 

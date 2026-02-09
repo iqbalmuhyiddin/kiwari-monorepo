@@ -73,6 +73,14 @@
 		</div>
 	</div>
 
+	<!-- Load error banner -->
+	{#if data.loadError}
+		<div class="load-error">
+			<span>{data.loadError}</span>
+			<a href="/menu" class="reload-link">Muat ulang</a>
+		</div>
+	{/if}
+
 	<!-- Category Manager (toggle panel) -->
 	{#if showCategoryManager}
 		<div class="category-manager">
@@ -226,6 +234,26 @@
 </div>
 
 <style>
+	.load-error {
+		background-color: var(--color-error-bg);
+		color: var(--color-error);
+		font-size: 13px;
+		font-weight: 500;
+		padding: 10px 14px;
+		border-radius: var(--radius-chip);
+		margin-bottom: 16px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+	}
+
+	.reload-link {
+		font-weight: 600;
+		text-decoration: underline;
+		white-space: nowrap;
+	}
+
 	.menu-page {
 		max-width: 1200px;
 	}
