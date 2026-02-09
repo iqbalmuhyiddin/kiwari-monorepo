@@ -246,6 +246,25 @@ data class ActiveOrderResponse(
     @SerializedName("amount_paid") val amountPaid: String
 )
 
+// ── Order List Response (GET /outlets/{oid}/orders) ──────────────
+
+data class OrdersListResponse(
+    @SerializedName("orders") val orders: List<OrderListItem>,
+    @SerializedName("limit") val limit: Int,
+    @SerializedName("offset") val offset: Int
+)
+
+data class OrderListItem(
+    @SerializedName("id") val id: String,
+    @SerializedName("order_number") val orderNumber: String,
+    @SerializedName("customer_id") val customerId: String?,
+    @SerializedName("order_type") val orderType: String,
+    @SerializedName("status") val status: String,
+    @SerializedName("table_number") val tableNumber: String?,
+    @SerializedName("total_amount") val totalAmount: String,
+    @SerializedName("created_at") val createdAt: String
+)
+
 // ── Add/Update/Delete Item Requests/Responses ──────────────
 
 data class AddOrderItemRequest(

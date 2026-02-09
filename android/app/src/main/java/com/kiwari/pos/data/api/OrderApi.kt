@@ -2,6 +2,7 @@ package com.kiwari.pos.data.api
 
 import com.kiwari.pos.data.model.ActiveOrdersResponse
 import com.kiwari.pos.data.model.AddOrderItemRequest
+import com.kiwari.pos.data.model.OrdersListResponse
 import com.kiwari.pos.data.model.AddPaymentRequest
 import com.kiwari.pos.data.model.AddPaymentResponse
 import com.kiwari.pos.data.model.CreateOrderRequest
@@ -31,6 +32,17 @@ interface OrderApi {
         @Path("orderId") orderId: String,
         @Body request: AddPaymentRequest
     ): Response<AddPaymentResponse>
+
+    @GET("outlets/{outletId}/orders")
+    suspend fun listOrders(
+        @Path("outletId") outletId: String,
+        @Query("status") status: String? = null,
+        @Query("type") type: String? = null,
+        @Query("start_date") startDate: String? = null,
+        @Query("end_date") endDate: String? = null,
+        @Query("limit") limit: Int = 50,
+        @Query("offset") offset: Int = 0
+    ): Response<OrdersListResponse>
 
     @GET("outlets/{outletId}/orders/active")
     suspend fun listActiveOrders(

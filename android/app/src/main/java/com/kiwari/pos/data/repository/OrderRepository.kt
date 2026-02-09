@@ -10,6 +10,7 @@ import com.kiwari.pos.data.model.CreateOrderRequest
 import com.kiwari.pos.data.model.ItemActionResponse
 import com.kiwari.pos.data.model.OrderDetailResponse
 import com.kiwari.pos.data.model.OrderResponse
+import com.kiwari.pos.data.model.OrdersListResponse
 import com.kiwari.pos.data.model.Result
 import com.kiwari.pos.data.model.UpdateOrderItemRequest
 import javax.inject.Inject
@@ -31,6 +32,18 @@ class OrderRepository @Inject constructor(
         val outletId = tokenRepository.getOutletId()
             ?: return Result.Error("No outlet selected")
         return safeApiCall(gson) { orderApi.addPayment(outletId, orderId, request) }
+    }
+
+    suspend fun listOrders(
+        status: String? = null,
+        startDate: String? = null,
+        endDate: String? = null,
+        limit: Int = 50,
+        offset: Int = 0
+    ): Result<OrdersListResponse> {
+        val outletId = tokenRepository.getOutletId()
+            ?: return Result.Error("No outlet selected")
+        return safeApiCall(gson) { orderApi.listOrders(outletId, status, null, startDate, endDate, limit, offset) }
     }
 
     suspend fun listActiveOrders(): Result<ActiveOrdersResponse> {

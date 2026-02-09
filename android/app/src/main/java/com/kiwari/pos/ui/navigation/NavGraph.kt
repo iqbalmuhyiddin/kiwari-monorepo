@@ -215,7 +215,9 @@ fun NavGraph(
             composable(Screen.OrderList.route) {
                 OrderListScreen(
                     onOrderClick = { orderId ->
-                        navController.navigate(Screen.OrderDetail.createRoute(orderId))
+                        navController.navigate(Screen.OrderDetail.createRoute(orderId)) {
+                            launchSingleTop = true
+                        }
                     },
                     onNavigateBack = {
                         navController.popBackStack()
