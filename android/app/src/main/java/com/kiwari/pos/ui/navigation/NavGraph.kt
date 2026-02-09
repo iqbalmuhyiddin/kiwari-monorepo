@@ -17,6 +17,7 @@ import com.kiwari.pos.ui.login.LoginScreen
 import com.kiwari.pos.ui.menu.CustomizationScreen
 import com.kiwari.pos.ui.menu.MenuScreen
 import com.kiwari.pos.ui.orders.OrderDetailScreen
+import com.kiwari.pos.ui.orders.OrderListScreen
 import com.kiwari.pos.ui.payment.PaymentScreen
 import com.kiwari.pos.ui.settings.PrinterSettingsScreen
 
@@ -37,6 +38,7 @@ sealed class Screen(val route: String) {
     object Customization : Screen("customization/{productId}") {
         fun createRoute(productId: String) = "customization/$productId"
     }
+    object OrderList : Screen("order-list")
     object Settings : Screen("settings")
     object OrderDetail : Screen("orderDetail/{orderId}") {
         fun createRoute(orderId: String) = "orderDetail/$orderId"
@@ -86,6 +88,11 @@ fun NavGraph(
                 },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onNavigateToOrderList = {
+                    navController.navigate(Screen.OrderList.route) {
+                        launchSingleTop = true
+                    }
                 }
             )
         }
@@ -146,10 +153,21 @@ fun NavGraph(
                 onNavigateBack = {
                     navController.popBackStack()
                 },
-                onNavigateToMenu = {
-                    navController.navigate(Screen.Menu.route) {
-                        popUpTo(Screen.Menu.route) { inclusive = true }
+                onNavigateToOrderDetail = { orderId ->
+                    navController.navigate(Screen.OrderDetail.createRoute(orderId)) {
+                        popUpTo(Screen.Menu.route)
                     }
+                }
+            )
+        }
+
+        composable(Screen.OrderList.route) {
+            OrderListScreen(
+                onOrderClick = { orderId ->
+                    navController.navigate(Screen.OrderDetail.createRoute(orderId))
+                },
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }

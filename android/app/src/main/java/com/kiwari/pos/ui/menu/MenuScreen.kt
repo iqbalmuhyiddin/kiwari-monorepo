@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
@@ -43,7 +44,8 @@ fun MenuScreen(
     viewModel: MenuViewModel = hiltViewModel(),
     onNavigateToCart: () -> Unit = {},
     onNavigateToCustomization: (productId: String) -> Unit = {},
-    onNavigateToSettings: () -> Unit = {}
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToOrderList: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showSearch by remember { mutableStateOf(false) }
@@ -63,7 +65,8 @@ fun MenuScreen(
                     showSearch = !showSearch
                     if (!showSearch) viewModel.onSearchQueryChanged("")
                 },
-                onSettingsClick = onNavigateToSettings
+                onSettingsClick = onNavigateToSettings,
+                onOrderListClick = onNavigateToOrderList
             )
 
             when {
@@ -197,7 +200,8 @@ private fun MenuTopBar(
     searchQuery: String,
     onSearchQueryChanged: (String) -> Unit,
     onToggleSearch: () -> Unit,
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onOrderListClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -243,6 +247,12 @@ private fun MenuTopBar(
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = "Cari produk"
+                        )
+                    }
+                    IconButton(onClick = onOrderListClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Default.List,
+                            contentDescription = "Pesanan aktif"
                         )
                     }
                     IconButton(onClick = onSettingsClick) {

@@ -55,7 +55,7 @@ data class CateringUiState(
     val error: String? = null,
     val createdOrderId: String? = null,
     // Success state
-    val isSuccess: Boolean = false,
+    val completedOrderId: String? = null,
     val orderNumber: String = ""
 )
 
@@ -142,7 +142,12 @@ class CateringViewModel @Inject constructor(
         _uiState.update { it.copy(error = null) }
     }
 
+    fun clearCompletedOrderId() {
+        _uiState.update { it.copy(completedOrderId = null) }
+    }
+
     fun onSubmitBooking() {
+        if (_uiState.value.isSubmitting) return
         val state = _uiState.value
 
         // Validate
@@ -212,7 +217,7 @@ class CateringViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     isSubmitting = false,
-                    isSuccess = true,
+                    completedOrderId = it.createdOrderId,
                     orderNumber = orderNumber
                 )
             }
