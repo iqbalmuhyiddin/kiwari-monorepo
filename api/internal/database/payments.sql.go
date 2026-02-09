@@ -59,9 +59,9 @@ RETURNING id, order_id, payment_method, amount, status, reference_number, amount
 
 type CreatePaymentParams struct {
 	OrderID         uuid.UUID      `json:"order_id"`
-	PaymentMethod   PaymentMethod  `json:"payment_method"`
+	PaymentMethod   string         `json:"payment_method"`
 	Amount          pgtype.Numeric `json:"amount"`
-	Status          PaymentStatus  `json:"status"`
+	Status          string         `json:"status"`
 	ReferenceNumber pgtype.Text    `json:"reference_number"`
 	AmountReceived  pgtype.Numeric `json:"amount_received"`
 	ChangeAmount    pgtype.Numeric `json:"change_amount"`
@@ -155,8 +155,8 @@ RETURNING id, outlet_id, order_number, customer_id, order_type, status, table_nu
 `
 
 type UpdateCateringStatusParams struct {
-	ID             uuid.UUID          `json:"id"`
-	CateringStatus NullCateringStatus `json:"catering_status"`
+	ID             uuid.UUID   `json:"id"`
+	CateringStatus pgtype.Text `json:"catering_status"`
 }
 
 func (q *Queries) UpdateCateringStatus(ctx context.Context, arg UpdateCateringStatusParams) (Order, error) {

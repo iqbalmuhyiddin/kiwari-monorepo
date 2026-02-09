@@ -19,15 +19,15 @@ RETURNING id, outlet_id, category_id, name, description, base_price, image_url, 
 `
 
 type CreateProductParams struct {
-	OutletID        uuid.UUID          `json:"outlet_id"`
-	CategoryID      uuid.UUID          `json:"category_id"`
-	Name            string             `json:"name"`
-	Description     pgtype.Text        `json:"description"`
-	BasePrice       pgtype.Numeric     `json:"base_price"`
-	ImageUrl        pgtype.Text        `json:"image_url"`
-	Station         NullKitchenStation `json:"station"`
-	PreparationTime pgtype.Int4        `json:"preparation_time"`
-	IsCombo         bool               `json:"is_combo"`
+	OutletID        uuid.UUID      `json:"outlet_id"`
+	CategoryID      uuid.UUID      `json:"category_id"`
+	Name            string         `json:"name"`
+	Description     pgtype.Text    `json:"description"`
+	BasePrice       pgtype.Numeric `json:"base_price"`
+	ImageUrl        pgtype.Text    `json:"image_url"`
+	Station         pgtype.Text    `json:"station"`
+	PreparationTime pgtype.Int4    `json:"preparation_time"`
+	IsCombo         bool           `json:"is_combo"`
 }
 
 func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error) {
@@ -152,16 +152,16 @@ RETURNING id, outlet_id, category_id, name, description, base_price, image_url, 
 `
 
 type UpdateProductParams struct {
-	CategoryID      uuid.UUID          `json:"category_id"`
-	Name            string             `json:"name"`
-	Description     pgtype.Text        `json:"description"`
-	BasePrice       pgtype.Numeric     `json:"base_price"`
-	ImageUrl        pgtype.Text        `json:"image_url"`
-	Station         NullKitchenStation `json:"station"`
-	PreparationTime pgtype.Int4        `json:"preparation_time"`
-	IsCombo         bool               `json:"is_combo"`
-	ID              uuid.UUID          `json:"id"`
-	OutletID        uuid.UUID          `json:"outlet_id"`
+	CategoryID      uuid.UUID      `json:"category_id"`
+	Name            string         `json:"name"`
+	Description     pgtype.Text    `json:"description"`
+	BasePrice       pgtype.Numeric `json:"base_price"`
+	ImageUrl        pgtype.Text    `json:"image_url"`
+	Station         pgtype.Text    `json:"station"`
+	PreparationTime pgtype.Int4    `json:"preparation_time"`
+	IsCombo         bool           `json:"is_combo"`
+	ID              uuid.UUID      `json:"id"`
+	OutletID        uuid.UUID      `json:"outlet_id"`
 }
 
 func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error) {

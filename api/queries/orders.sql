@@ -60,8 +60,8 @@ SELECT * FROM order_item_modifiers WHERE order_item_id = $1 ORDER BY id;
 -- name: ListOrders :many
 SELECT * FROM orders
 WHERE outlet_id = $1
-  AND (sqlc.narg('status')::order_status IS NULL OR status = sqlc.narg('status')::order_status)
-  AND (sqlc.narg('order_type')::order_type IS NULL OR order_type = sqlc.narg('order_type')::order_type)
+  AND (sqlc.narg('status')::text IS NULL OR status = sqlc.narg('status'))
+  AND (sqlc.narg('order_type')::text IS NULL OR order_type = sqlc.narg('order_type'))
   AND (sqlc.narg('start_date')::timestamptz IS NULL OR created_at >= sqlc.narg('start_date')::timestamptz)
   AND (sqlc.narg('end_date')::timestamptz IS NULL OR created_at < sqlc.narg('end_date')::timestamptz + interval '1 day')
 ORDER BY created_at DESC

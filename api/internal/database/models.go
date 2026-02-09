@@ -5,405 +5,11 @@
 package database
 
 import (
-	"database/sql/driver"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
-
-type CateringStatus string
-
-const (
-	CateringStatusBOOKED    CateringStatus = "BOOKED"
-	CateringStatusDPPAID    CateringStatus = "DP_PAID"
-	CateringStatusSETTLED   CateringStatus = "SETTLED"
-	CateringStatusCANCELLED CateringStatus = "CANCELLED"
-)
-
-func (e *CateringStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = CateringStatus(s)
-	case string:
-		*e = CateringStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for CateringStatus: %T", src)
-	}
-	return nil
-}
-
-type NullCateringStatus struct {
-	CateringStatus CateringStatus `json:"catering_status"`
-	Valid          bool           `json:"valid"` // Valid is true if CateringStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullCateringStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.CateringStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.CateringStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullCateringStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.CateringStatus), nil
-}
-
-type DiscountType string
-
-const (
-	DiscountTypePERCENTAGE  DiscountType = "PERCENTAGE"
-	DiscountTypeFIXEDAMOUNT DiscountType = "FIXED_AMOUNT"
-)
-
-func (e *DiscountType) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = DiscountType(s)
-	case string:
-		*e = DiscountType(s)
-	default:
-		return fmt.Errorf("unsupported scan type for DiscountType: %T", src)
-	}
-	return nil
-}
-
-type NullDiscountType struct {
-	DiscountType DiscountType `json:"discount_type"`
-	Valid        bool         `json:"valid"` // Valid is true if DiscountType is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullDiscountType) Scan(value interface{}) error {
-	if value == nil {
-		ns.DiscountType, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.DiscountType.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullDiscountType) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.DiscountType), nil
-}
-
-type KitchenStation string
-
-const (
-	KitchenStationGRILL    KitchenStation = "GRILL"
-	KitchenStationBEVERAGE KitchenStation = "BEVERAGE"
-	KitchenStationRICE     KitchenStation = "RICE"
-	KitchenStationDESSERT  KitchenStation = "DESSERT"
-)
-
-func (e *KitchenStation) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = KitchenStation(s)
-	case string:
-		*e = KitchenStation(s)
-	default:
-		return fmt.Errorf("unsupported scan type for KitchenStation: %T", src)
-	}
-	return nil
-}
-
-type NullKitchenStation struct {
-	KitchenStation KitchenStation `json:"kitchen_station"`
-	Valid          bool           `json:"valid"` // Valid is true if KitchenStation is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullKitchenStation) Scan(value interface{}) error {
-	if value == nil {
-		ns.KitchenStation, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.KitchenStation.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullKitchenStation) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.KitchenStation), nil
-}
-
-type OrderItemStatus string
-
-const (
-	OrderItemStatusPENDING   OrderItemStatus = "PENDING"
-	OrderItemStatusPREPARING OrderItemStatus = "PREPARING"
-	OrderItemStatusREADY     OrderItemStatus = "READY"
-)
-
-func (e *OrderItemStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = OrderItemStatus(s)
-	case string:
-		*e = OrderItemStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for OrderItemStatus: %T", src)
-	}
-	return nil
-}
-
-type NullOrderItemStatus struct {
-	OrderItemStatus OrderItemStatus `json:"order_item_status"`
-	Valid           bool            `json:"valid"` // Valid is true if OrderItemStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullOrderItemStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.OrderItemStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.OrderItemStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullOrderItemStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.OrderItemStatus), nil
-}
-
-type OrderStatus string
-
-const (
-	OrderStatusNEW       OrderStatus = "NEW"
-	OrderStatusPREPARING OrderStatus = "PREPARING"
-	OrderStatusREADY     OrderStatus = "READY"
-	OrderStatusCOMPLETED OrderStatus = "COMPLETED"
-	OrderStatusCANCELLED OrderStatus = "CANCELLED"
-)
-
-func (e *OrderStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = OrderStatus(s)
-	case string:
-		*e = OrderStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for OrderStatus: %T", src)
-	}
-	return nil
-}
-
-type NullOrderStatus struct {
-	OrderStatus OrderStatus `json:"order_status"`
-	Valid       bool        `json:"valid"` // Valid is true if OrderStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullOrderStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.OrderStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.OrderStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullOrderStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.OrderStatus), nil
-}
-
-type OrderType string
-
-const (
-	OrderTypeDINEIN   OrderType = "DINE_IN"
-	OrderTypeTAKEAWAY OrderType = "TAKEAWAY"
-	OrderTypeDELIVERY OrderType = "DELIVERY"
-	OrderTypeCATERING OrderType = "CATERING"
-)
-
-func (e *OrderType) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = OrderType(s)
-	case string:
-		*e = OrderType(s)
-	default:
-		return fmt.Errorf("unsupported scan type for OrderType: %T", src)
-	}
-	return nil
-}
-
-type NullOrderType struct {
-	OrderType OrderType `json:"order_type"`
-	Valid     bool      `json:"valid"` // Valid is true if OrderType is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullOrderType) Scan(value interface{}) error {
-	if value == nil {
-		ns.OrderType, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.OrderType.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullOrderType) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.OrderType), nil
-}
-
-type PaymentMethod string
-
-const (
-	PaymentMethodCASH     PaymentMethod = "CASH"
-	PaymentMethodQRIS     PaymentMethod = "QRIS"
-	PaymentMethodTRANSFER PaymentMethod = "TRANSFER"
-)
-
-func (e *PaymentMethod) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = PaymentMethod(s)
-	case string:
-		*e = PaymentMethod(s)
-	default:
-		return fmt.Errorf("unsupported scan type for PaymentMethod: %T", src)
-	}
-	return nil
-}
-
-type NullPaymentMethod struct {
-	PaymentMethod PaymentMethod `json:"payment_method"`
-	Valid         bool          `json:"valid"` // Valid is true if PaymentMethod is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullPaymentMethod) Scan(value interface{}) error {
-	if value == nil {
-		ns.PaymentMethod, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.PaymentMethod.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullPaymentMethod) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.PaymentMethod), nil
-}
-
-type PaymentStatus string
-
-const (
-	PaymentStatusPENDING   PaymentStatus = "PENDING"
-	PaymentStatusCOMPLETED PaymentStatus = "COMPLETED"
-	PaymentStatusFAILED    PaymentStatus = "FAILED"
-)
-
-func (e *PaymentStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = PaymentStatus(s)
-	case string:
-		*e = PaymentStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for PaymentStatus: %T", src)
-	}
-	return nil
-}
-
-type NullPaymentStatus struct {
-	PaymentStatus PaymentStatus `json:"payment_status"`
-	Valid         bool          `json:"valid"` // Valid is true if PaymentStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullPaymentStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.PaymentStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.PaymentStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullPaymentStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.PaymentStatus), nil
-}
-
-type UserRole string
-
-const (
-	UserRoleOWNER   UserRole = "OWNER"
-	UserRoleMANAGER UserRole = "MANAGER"
-	UserRoleCASHIER UserRole = "CASHIER"
-	UserRoleKITCHEN UserRole = "KITCHEN"
-)
-
-func (e *UserRole) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = UserRole(s)
-	case string:
-		*e = UserRole(s)
-	default:
-		return fmt.Errorf("unsupported scan type for UserRole: %T", src)
-	}
-	return nil
-}
-
-type NullUserRole struct {
-	UserRole UserRole `json:"user_role"`
-	Valid    bool     `json:"valid"` // Valid is true if UserRole is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullUserRole) Scan(value interface{}) error {
-	if value == nil {
-		ns.UserRole, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.UserRole.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullUserRole) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.UserRole), nil
-}
 
 type Category struct {
 	ID          uuid.UUID   `json:"id"`
@@ -459,18 +65,18 @@ type Order struct {
 	OutletID         uuid.UUID          `json:"outlet_id"`
 	OrderNumber      string             `json:"order_number"`
 	CustomerID       pgtype.UUID        `json:"customer_id"`
-	OrderType        OrderType          `json:"order_type"`
-	Status           OrderStatus        `json:"status"`
+	OrderType        string             `json:"order_type"`
+	Status           string             `json:"status"`
 	TableNumber      pgtype.Text        `json:"table_number"`
 	Notes            pgtype.Text        `json:"notes"`
 	Subtotal         pgtype.Numeric     `json:"subtotal"`
-	DiscountType     NullDiscountType   `json:"discount_type"`
+	DiscountType     pgtype.Text        `json:"discount_type"`
 	DiscountValue    pgtype.Numeric     `json:"discount_value"`
 	DiscountAmount   pgtype.Numeric     `json:"discount_amount"`
 	TaxAmount        pgtype.Numeric     `json:"tax_amount"`
 	TotalAmount      pgtype.Numeric     `json:"total_amount"`
 	CateringDate     pgtype.Timestamptz `json:"catering_date"`
-	CateringStatus   NullCateringStatus `json:"catering_status"`
+	CateringStatus   pgtype.Text        `json:"catering_status"`
 	CateringDpAmount pgtype.Numeric     `json:"catering_dp_amount"`
 	DeliveryPlatform pgtype.Text        `json:"delivery_platform"`
 	DeliveryAddress  pgtype.Text        `json:"delivery_address"`
@@ -481,19 +87,19 @@ type Order struct {
 }
 
 type OrderItem struct {
-	ID             uuid.UUID          `json:"id"`
-	OrderID        uuid.UUID          `json:"order_id"`
-	ProductID      uuid.UUID          `json:"product_id"`
-	VariantID      pgtype.UUID        `json:"variant_id"`
-	Quantity       int32              `json:"quantity"`
-	UnitPrice      pgtype.Numeric     `json:"unit_price"`
-	DiscountType   NullDiscountType   `json:"discount_type"`
-	DiscountValue  pgtype.Numeric     `json:"discount_value"`
-	DiscountAmount pgtype.Numeric     `json:"discount_amount"`
-	Subtotal       pgtype.Numeric     `json:"subtotal"`
-	Notes          pgtype.Text        `json:"notes"`
-	Status         OrderItemStatus    `json:"status"`
-	Station        NullKitchenStation `json:"station"`
+	ID             uuid.UUID      `json:"id"`
+	OrderID        uuid.UUID      `json:"order_id"`
+	ProductID      uuid.UUID      `json:"product_id"`
+	VariantID      pgtype.UUID    `json:"variant_id"`
+	Quantity       int32          `json:"quantity"`
+	UnitPrice      pgtype.Numeric `json:"unit_price"`
+	DiscountType   pgtype.Text    `json:"discount_type"`
+	DiscountValue  pgtype.Numeric `json:"discount_value"`
+	DiscountAmount pgtype.Numeric `json:"discount_amount"`
+	Subtotal       pgtype.Numeric `json:"subtotal"`
+	Notes          pgtype.Text    `json:"notes"`
+	Status         string         `json:"status"`
+	Station        pgtype.Text    `json:"station"`
 }
 
 type OrderItemModifier struct {
@@ -517,9 +123,9 @@ type Outlet struct {
 type Payment struct {
 	ID              uuid.UUID      `json:"id"`
 	OrderID         uuid.UUID      `json:"order_id"`
-	PaymentMethod   PaymentMethod  `json:"payment_method"`
+	PaymentMethod   string         `json:"payment_method"`
 	Amount          pgtype.Numeric `json:"amount"`
-	Status          PaymentStatus  `json:"status"`
+	Status          string         `json:"status"`
 	ReferenceNumber pgtype.Text    `json:"reference_number"`
 	AmountReceived  pgtype.Numeric `json:"amount_received"`
 	ChangeAmount    pgtype.Numeric `json:"change_amount"`
@@ -528,19 +134,19 @@ type Payment struct {
 }
 
 type Product struct {
-	ID              uuid.UUID          `json:"id"`
-	OutletID        uuid.UUID          `json:"outlet_id"`
-	CategoryID      uuid.UUID          `json:"category_id"`
-	Name            string             `json:"name"`
-	Description     pgtype.Text        `json:"description"`
-	BasePrice       pgtype.Numeric     `json:"base_price"`
-	ImageUrl        pgtype.Text        `json:"image_url"`
-	Station         NullKitchenStation `json:"station"`
-	PreparationTime pgtype.Int4        `json:"preparation_time"`
-	IsCombo         bool               `json:"is_combo"`
-	IsActive        bool               `json:"is_active"`
-	CreatedAt       time.Time          `json:"created_at"`
-	UpdatedAt       time.Time          `json:"updated_at"`
+	ID              uuid.UUID      `json:"id"`
+	OutletID        uuid.UUID      `json:"outlet_id"`
+	CategoryID      uuid.UUID      `json:"category_id"`
+	Name            string         `json:"name"`
+	Description     pgtype.Text    `json:"description"`
+	BasePrice       pgtype.Numeric `json:"base_price"`
+	ImageUrl        pgtype.Text    `json:"image_url"`
+	Station         pgtype.Text    `json:"station"`
+	PreparationTime pgtype.Int4    `json:"preparation_time"`
+	IsCombo         bool           `json:"is_combo"`
+	IsActive        bool           `json:"is_active"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
 }
 
 type User struct {
@@ -549,7 +155,7 @@ type User struct {
 	Email          string      `json:"email"`
 	HashedPassword string      `json:"hashed_password"`
 	FullName       string      `json:"full_name"`
-	Role           UserRole    `json:"role"`
+	Role           string      `json:"role"`
 	Pin            pgtype.Text `json:"pin"`
 	IsActive       bool        `json:"is_active"`
 	CreatedAt      time.Time   `json:"created_at"`

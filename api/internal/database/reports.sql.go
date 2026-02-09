@@ -190,7 +190,7 @@ type GetPaymentSummaryParams struct {
 }
 
 type GetPaymentSummaryRow struct {
-	PaymentMethod    PaymentMethod  `json:"payment_method"`
+	PaymentMethod    string         `json:"payment_method"`
 	TransactionCount int64          `json:"transaction_count"`
 	TotalAmount      pgtype.Numeric `json:"total_amount"`
 }

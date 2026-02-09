@@ -23,7 +23,7 @@ type CreateUserParams struct {
 	Email          string      `json:"email"`
 	HashedPassword string      `json:"hashed_password"`
 	FullName       string      `json:"full_name"`
-	Role           UserRole    `json:"role"`
+	Role           string      `json:"role"`
 	Pin            pgtype.Text `json:"pin"`
 }
 
@@ -183,7 +183,7 @@ RETURNING id, outlet_id, email, hashed_password, full_name, role, pin, is_active
 type UpdateUserParams struct {
 	Email    string      `json:"email"`
 	FullName string      `json:"full_name"`
-	Role     UserRole    `json:"role"`
+	Role     string      `json:"role"`
 	Pin      pgtype.Text `json:"pin"`
 	ID       uuid.UUID   `json:"id"`
 	OutletID uuid.UUID   `json:"outlet_id"`

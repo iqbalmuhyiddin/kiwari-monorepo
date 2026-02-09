@@ -84,17 +84,17 @@ type CreateOrderParams struct {
 	OutletID         uuid.UUID          `json:"outlet_id"`
 	OrderNumber      string             `json:"order_number"`
 	CustomerID       pgtype.UUID        `json:"customer_id"`
-	OrderType        OrderType          `json:"order_type"`
+	OrderType        string             `json:"order_type"`
 	TableNumber      pgtype.Text        `json:"table_number"`
 	Notes            pgtype.Text        `json:"notes"`
 	Subtotal         pgtype.Numeric     `json:"subtotal"`
-	DiscountType     NullDiscountType   `json:"discount_type"`
+	DiscountType     pgtype.Text        `json:"discount_type"`
 	DiscountValue    pgtype.Numeric     `json:"discount_value"`
 	DiscountAmount   pgtype.Numeric     `json:"discount_amount"`
 	TaxAmount        pgtype.Numeric     `json:"tax_amount"`
 	TotalAmount      pgtype.Numeric     `json:"total_amount"`
 	CateringDate     pgtype.Timestamptz `json:"catering_date"`
-	CateringStatus   NullCateringStatus `json:"catering_status"`
+	CateringStatus   pgtype.Text        `json:"catering_status"`
 	CateringDpAmount pgtype.Numeric     `json:"catering_dp_amount"`
 	DeliveryPlatform pgtype.Text        `json:"delivery_platform"`
 	DeliveryAddress  pgtype.Text        `json:"delivery_address"`
@@ -164,17 +164,17 @@ INSERT INTO order_items (
 `
 
 type CreateOrderItemParams struct {
-	OrderID        uuid.UUID          `json:"order_id"`
-	ProductID      uuid.UUID          `json:"product_id"`
-	VariantID      pgtype.UUID        `json:"variant_id"`
-	Quantity       int32              `json:"quantity"`
-	UnitPrice      pgtype.Numeric     `json:"unit_price"`
-	DiscountType   NullDiscountType   `json:"discount_type"`
-	DiscountValue  pgtype.Numeric     `json:"discount_value"`
-	DiscountAmount pgtype.Numeric     `json:"discount_amount"`
-	Subtotal       pgtype.Numeric     `json:"subtotal"`
-	Notes          pgtype.Text        `json:"notes"`
-	Station        NullKitchenStation `json:"station"`
+	OrderID        uuid.UUID      `json:"order_id"`
+	ProductID      uuid.UUID      `json:"product_id"`
+	VariantID      pgtype.UUID    `json:"variant_id"`
+	Quantity       int32          `json:"quantity"`
+	UnitPrice      pgtype.Numeric `json:"unit_price"`
+	DiscountType   pgtype.Text    `json:"discount_type"`
+	DiscountValue  pgtype.Numeric `json:"discount_value"`
+	DiscountAmount pgtype.Numeric `json:"discount_amount"`
+	Subtotal       pgtype.Numeric `json:"subtotal"`
+	Notes          pgtype.Text    `json:"notes"`
+	Station        pgtype.Text    `json:"station"`
 }
 
 func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error) {
@@ -369,10 +369,10 @@ type GetProductForOrderParams struct {
 }
 
 type GetProductForOrderRow struct {
-	ID        uuid.UUID          `json:"id"`
-	OutletID  uuid.UUID          `json:"outlet_id"`
-	BasePrice pgtype.Numeric     `json:"base_price"`
-	Station   NullKitchenStation `json:"station"`
+	ID        uuid.UUID      `json:"id"`
+	OutletID  uuid.UUID      `json:"outlet_id"`
+	BasePrice pgtype.Numeric `json:"base_price"`
+	Station   pgtype.Text    `json:"station"`
 }
 
 func (q *Queries) GetProductForOrder(ctx context.Context, arg GetProductForOrderParams) (GetProductForOrderRow, error) {
@@ -440,18 +440,18 @@ type ListActiveOrdersRow struct {
 	OutletID         uuid.UUID          `json:"outlet_id"`
 	OrderNumber      string             `json:"order_number"`
 	CustomerID       pgtype.UUID        `json:"customer_id"`
-	OrderType        OrderType          `json:"order_type"`
-	Status           OrderStatus        `json:"status"`
+	OrderType        string             `json:"order_type"`
+	Status           string             `json:"status"`
 	TableNumber      pgtype.Text        `json:"table_number"`
 	Notes            pgtype.Text        `json:"notes"`
 	Subtotal         pgtype.Numeric     `json:"subtotal"`
-	DiscountType     NullDiscountType   `json:"discount_type"`
+	DiscountType     pgtype.Text        `json:"discount_type"`
 	DiscountValue    pgtype.Numeric     `json:"discount_value"`
 	DiscountAmount   pgtype.Numeric     `json:"discount_amount"`
 	TaxAmount        pgtype.Numeric     `json:"tax_amount"`
 	TotalAmount      pgtype.Numeric     `json:"total_amount"`
 	CateringDate     pgtype.Timestamptz `json:"catering_date"`
-	CateringStatus   NullCateringStatus `json:"catering_status"`
+	CateringStatus   pgtype.Text        `json:"catering_status"`
 	CateringDpAmount pgtype.Numeric     `json:"catering_dp_amount"`
 	DeliveryPlatform pgtype.Text        `json:"delivery_platform"`
 	DeliveryAddress  pgtype.Text        `json:"delivery_address"`
@@ -578,8 +578,8 @@ func (q *Queries) ListOrderItemsByOrder(ctx context.Context, orderID uuid.UUID) 
 const listOrders = `-- name: ListOrders :many
 SELECT id, outlet_id, order_number, customer_id, order_type, status, table_number, notes, subtotal, discount_type, discount_value, discount_amount, tax_amount, total_amount, catering_date, catering_status, catering_dp_amount, delivery_platform, delivery_address, created_by, created_at, updated_at, completed_at FROM orders
 WHERE outlet_id = $1
-  AND ($4::order_status IS NULL OR status = $4::order_status)
-  AND ($5::order_type IS NULL OR order_type = $5::order_type)
+  AND ($4::text IS NULL OR status = $4)
+  AND ($5::text IS NULL OR order_type = $5)
   AND ($6::timestamptz IS NULL OR created_at >= $6::timestamptz)
   AND ($7::timestamptz IS NULL OR created_at < $7::timestamptz + interval '1 day')
 ORDER BY created_at DESC
@@ -590,8 +590,8 @@ type ListOrdersParams struct {
 	OutletID  uuid.UUID          `json:"outlet_id"`
 	Limit     int32              `json:"limit"`
 	Offset    int32              `json:"offset"`
-	Status    NullOrderStatus    `json:"status"`
-	OrderType NullOrderType      `json:"order_type"`
+	Status    pgtype.Text        `json:"status"`
+	OrderType pgtype.Text        `json:"order_type"`
 	StartDate pgtype.Timestamptz `json:"start_date"`
 	EndDate   pgtype.Timestamptz `json:"end_date"`
 }
@@ -738,9 +738,9 @@ RETURNING id, order_id, product_id, variant_id, quantity, unit_price, discount_t
 `
 
 type UpdateOrderItemStatusParams struct {
-	ID      uuid.UUID       `json:"id"`
-	OrderID uuid.UUID       `json:"order_id"`
-	Status  OrderItemStatus `json:"status"`
+	ID      uuid.UUID `json:"id"`
+	OrderID uuid.UUID `json:"order_id"`
+	Status  string    `json:"status"`
 }
 
 func (q *Queries) UpdateOrderItemStatus(ctx context.Context, arg UpdateOrderItemStatusParams) (OrderItem, error) {
@@ -773,10 +773,10 @@ RETURNING id, outlet_id, order_number, customer_id, order_type, status, table_nu
 `
 
 type UpdateOrderStatusParams struct {
-	ID       uuid.UUID   `json:"id"`
-	OutletID uuid.UUID   `json:"outlet_id"`
-	Status   OrderStatus `json:"status"`
-	Status_2 OrderStatus `json:"status_2"`
+	ID       uuid.UUID `json:"id"`
+	OutletID uuid.UUID `json:"outlet_id"`
+	Status   string    `json:"status"`
+	Status_2 string    `json:"status_2"`
 }
 
 func (q *Queries) UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) (Order, error) {
