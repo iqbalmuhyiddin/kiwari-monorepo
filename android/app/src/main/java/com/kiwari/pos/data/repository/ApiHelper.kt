@@ -23,6 +23,21 @@ suspend fun <T> safeApiCall(gson: Gson, call: suspend () -> Response<T>): Result
     }
 }
 
+suspend fun safeApiCallNoBody(gson: Gson, call: suspend () -> Response<Void>): Result<Unit> {
+    return try {
+        val response = call()
+        if (response.isSuccessful) {
+            Result.Success(Unit)
+        } else {
+            Result.Error(parseErrorResponse(gson, response.errorBody()?.string()))
+        }
+    } catch (e: IOException) {
+        Result.Error("Network connection failed. Please check your internet connection.")
+    } catch (e: Exception) {
+        Result.Error("An unexpected error occurred: ${e.message}")
+    }
+}
+
 fun parseErrorResponse(gson: Gson, errorBody: String?): String {
     return try {
         if (errorBody != null) {
