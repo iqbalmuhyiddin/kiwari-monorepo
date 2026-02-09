@@ -37,6 +37,7 @@ func (m *mockOrderService) CreateOrder(ctx context.Context, req service.CreateOr
 type mockOrderStore struct {
 	getOrderFn                  func(ctx context.Context, arg database.GetOrderParams) (database.Order, error)
 	listOrdersFn                func(ctx context.Context, arg database.ListOrdersParams) ([]database.Order, error)
+	listActiveOrdersFn          func(ctx context.Context, arg database.ListActiveOrdersParams) ([]database.ListActiveOrdersRow, error)
 	listOrderItemsByOrderFn     func(ctx context.Context, orderID uuid.UUID) ([]database.OrderItem, error)
 	listOrderItemModifiersFn    func(ctx context.Context, orderItemID uuid.UUID) ([]database.OrderItemModifier, error)
 	listPaymentsByOrderFn       func(ctx context.Context, orderID uuid.UUID) ([]database.Payment, error)
@@ -67,6 +68,13 @@ func (m *mockOrderStore) ListOrders(ctx context.Context, arg database.ListOrders
 		return m.listOrdersFn(ctx, arg)
 	}
 	return []database.Order{}, nil
+}
+
+func (m *mockOrderStore) ListActiveOrders(ctx context.Context, arg database.ListActiveOrdersParams) ([]database.ListActiveOrdersRow, error) {
+	if m.listActiveOrdersFn != nil {
+		return m.listActiveOrdersFn(ctx, arg)
+	}
+	return []database.ListActiveOrdersRow{}, nil
 }
 
 func (m *mockOrderStore) ListOrderItemsByOrder(ctx context.Context, orderID uuid.UUID) ([]database.OrderItem, error) {
@@ -2997,5 +3005,227 @@ func TestUpdateItemStatus_CompletedOrder(t *testing.T) {
 	errMsg := resp["error"].(string)
 	if errMsg != "cannot update items on a COMPLETED order" {
 		t.Fatalf("error message: got %q, want %q", errMsg, "cannot update items on a COMPLETED order")
+	}
+}
+
+// --- ListActive Tests ---
+
+func TestListActive_Success(t *testing.T) {
+	outletID := uuid.New()
+	order1ID := uuid.New()
+	order2ID := uuid.New()
+	claims := testClaims(outletID)
+
+	// Create mock rows with all required fields
+	var totalAmount1, totalAmount2 pgtype.Numeric
+	_ = totalAmount1.Scan("100000.00")
+	_ = totalAmount2.Scan("75000.00")
+
+	var amountPaid1, amountPaid2 pgtype.Numeric
+	_ = amountPaid1.Scan("50000.00")
+	_ = amountPaid2.Scan("75000.00")
+
+	var subtotal1, subtotal2, discountAmt1, discountAmt2, taxAmt1, taxAmt2 pgtype.Numeric
+	_ = subtotal1.Scan("100000.00")
+	_ = subtotal2.Scan("75000.00")
+	_ = discountAmt1.Scan("0.00")
+	_ = discountAmt2.Scan("0.00")
+	_ = taxAmt1.Scan("0.00")
+	_ = taxAmt2.Scan("0.00")
+
+	store := &mockOrderStore{
+		listActiveOrdersFn: func(ctx context.Context, arg database.ListActiveOrdersParams) ([]database.ListActiveOrdersRow, error) {
+			if arg.OutletID != outletID {
+				t.Errorf("OutletID: got %v, want %v", arg.OutletID, outletID)
+			}
+			if arg.Limit != 50 {
+				t.Errorf("Limit: got %d, want %d", arg.Limit, 50)
+			}
+			if arg.Offset != 0 {
+				t.Errorf("Offset: got %d, want %d", arg.Offset, 0)
+			}
+			return []database.ListActiveOrdersRow{
+				{
+					ID:             order1ID,
+					OutletID:       outletID,
+					OrderNumber:    "ORD-001",
+					OrderType:      database.OrderTypeDINEIN,
+					Status:         database.OrderStatusNEW,
+					Subtotal:       subtotal1,
+					DiscountAmount: discountAmt1,
+					TaxAmount:      taxAmt1,
+					TotalAmount:    totalAmount1,
+					AmountPaid:     amountPaid1,
+					CreatedBy:      uuid.New(),
+					CreatedAt:      time.Now(),
+					UpdatedAt:      time.Now(),
+				},
+				{
+					ID:             order2ID,
+					OutletID:       outletID,
+					OrderNumber:    "ORD-002",
+					OrderType:      database.OrderTypeTAKEAWAY,
+					Status:         database.OrderStatusPREPARING,
+					Subtotal:       subtotal2,
+					DiscountAmount: discountAmt2,
+					TaxAmount:      taxAmt2,
+					TotalAmount:    totalAmount2,
+					AmountPaid:     amountPaid2,
+					CreatedBy:      uuid.New(),
+					CreatedAt:      time.Now(),
+					UpdatedAt:      time.Now(),
+				},
+			}, nil
+		},
+	}
+
+	svc := &mockOrderService{}
+	router := setupOrderRouterWithStore(svc, store, claims)
+	rr := doAuthRequest(t, router, "GET", "/outlets/"+outletID.String()+"/orders/active", nil, claims)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+
+	var resp map[string]interface{}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatal("decode response:", err)
+	}
+
+	orders := resp["orders"].([]interface{})
+	if len(orders) != 2 {
+		t.Fatalf("orders count: got %d, want %d", len(orders), 2)
+	}
+
+	order1 := orders[0].(map[string]interface{})
+	if order1["order_number"] != "ORD-001" {
+		t.Errorf("order_number: got %v, want %v", order1["order_number"], "ORD-001")
+	}
+	if order1["amount_paid"] != "50000.00" {
+		t.Errorf("amount_paid: got %v, want %v", order1["amount_paid"], "50000.00")
+	}
+
+	order2 := orders[1].(map[string]interface{})
+	if order2["order_number"] != "ORD-002" {
+		t.Errorf("order_number: got %v, want %v", order2["order_number"], "ORD-002")
+	}
+	if order2["amount_paid"] != "75000.00" {
+		t.Errorf("amount_paid: got %v, want %v", order2["amount_paid"], "75000.00")
+	}
+
+	if int(resp["limit"].(float64)) != 50 {
+		t.Errorf("limit: got %v, want %d", resp["limit"], 50)
+	}
+	if int(resp["offset"].(float64)) != 0 {
+		t.Errorf("offset: got %v, want %d", resp["offset"], 0)
+	}
+}
+
+func TestListActive_EmptyList(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+
+	store := &mockOrderStore{
+		listActiveOrdersFn: func(ctx context.Context, arg database.ListActiveOrdersParams) ([]database.ListActiveOrdersRow, error) {
+			return []database.ListActiveOrdersRow{}, nil
+		},
+	}
+
+	svc := &mockOrderService{}
+	router := setupOrderRouterWithStore(svc, store, claims)
+	rr := doAuthRequest(t, router, "GET", "/outlets/"+outletID.String()+"/orders/active", nil, claims)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+
+	var resp map[string]interface{}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatal("decode response:", err)
+	}
+
+	orders := resp["orders"].([]interface{})
+	if len(orders) != 0 {
+		t.Fatalf("orders count: got %d, want %d", len(orders), 0)
+	}
+}
+
+func TestListActive_Pagination(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+
+	store := &mockOrderStore{
+		listActiveOrdersFn: func(ctx context.Context, arg database.ListActiveOrdersParams) ([]database.ListActiveOrdersRow, error) {
+			if arg.Limit != 10 {
+				t.Errorf("Limit: got %d, want %d", arg.Limit, 10)
+			}
+			if arg.Offset != 20 {
+				t.Errorf("Offset: got %d, want %d", arg.Offset, 20)
+			}
+			return []database.ListActiveOrdersRow{}, nil
+		},
+	}
+
+	svc := &mockOrderService{}
+	router := setupOrderRouterWithStore(svc, store, claims)
+	rr := doAuthRequest(t, router, "GET", "/outlets/"+outletID.String()+"/orders/active?limit=10&offset=20", nil, claims)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+
+	var resp map[string]interface{}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatal("decode response:", err)
+	}
+
+	if int(resp["limit"].(float64)) != 10 {
+		t.Errorf("limit: got %v, want %d", resp["limit"], 10)
+	}
+	if int(resp["offset"].(float64)) != 20 {
+		t.Errorf("offset: got %v, want %d", resp["offset"], 20)
+	}
+}
+
+func TestListActive_InvalidOutletID(t *testing.T) {
+	outletID := uuid.New()
+	claims := testClaims(outletID)
+	store := &mockOrderStore{}
+	svc := &mockOrderService{}
+	router := setupOrderRouterWithStore(svc, store, claims)
+	rr := doAuthRequest(t, router, "GET", "/outlets/invalid-uuid/orders/active", nil, claims)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusBadRequest, rr.Body.String())
+	}
+
+	resp := decodeOrderResponse(t, rr)
+	if resp["error"] == nil {
+		t.Fatal("expected error field")
+	}
+}
+
+func TestListActive_Unauthenticated(t *testing.T) {
+	outletID := uuid.New()
+	store := &mockOrderStore{}
+	svc := &mockOrderService{}
+	router := chi.NewRouter()
+	router.Use(middleware.Authenticate(testJWTSecret))
+	pool := &mockPool{}
+	newStore := mockNewStore(store)
+	h := handler.NewOrderHandler(svc, store, pool, newStore)
+	router.Route("/outlets/{oid}/orders", h.RegisterRoutes)
+
+	req := httptest.NewRequest("GET", "/outlets/"+outletID.String()+"/orders/active", nil)
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusUnauthorized, rr.Body.String())
+	}
+
+	resp := decodeOrderResponse(t, rr)
+	if resp["error"] == nil {
+		t.Fatal("expected error field")
 	}
 }

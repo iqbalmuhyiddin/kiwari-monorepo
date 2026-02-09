@@ -126,3 +126,18 @@ UPDATE orders SET
     updated_at = now()
 WHERE id = $1
 RETURNING *;
+
+-- name: ListActiveOrders :many
+SELECT o.*,
+       COALESCE(
+         (SELECT SUM(p.amount) FROM payments p WHERE p.order_id = o.id AND p.status = 'COMPLETED'),
+         0
+       )::decimal(12,2) AS amount_paid
+FROM orders o
+WHERE o.outlet_id = $1
+  AND (
+    o.status IN ('NEW', 'PREPARING', 'READY')
+    OR (o.order_type = 'CATERING' AND o.catering_status IN ('BOOKED', 'DP_PAID'))
+  )
+ORDER BY o.created_at DESC
+LIMIT $2 OFFSET $3;

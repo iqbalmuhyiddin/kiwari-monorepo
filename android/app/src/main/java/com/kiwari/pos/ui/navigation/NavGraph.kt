@@ -16,19 +16,33 @@ import com.kiwari.pos.ui.catering.CateringScreen
 import com.kiwari.pos.ui.login.LoginScreen
 import com.kiwari.pos.ui.menu.CustomizationScreen
 import com.kiwari.pos.ui.menu.MenuScreen
+import com.kiwari.pos.ui.orders.OrderDetailScreen
+import com.kiwari.pos.ui.orders.OrderListScreen
 import com.kiwari.pos.ui.payment.PaymentScreen
 import com.kiwari.pos.ui.settings.PrinterSettingsScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Menu : Screen("menu")
-    object Cart : Screen("cart")
-    object Payment : Screen("payment")
+    object Cart : Screen("cart?editOrderId={editOrderId}") {
+        fun createRoute(editOrderId: String? = null): String {
+            return if (editOrderId != null) "cart?editOrderId=$editOrderId" else "cart"
+        }
+    }
+    object Payment : Screen("payment?orderId={orderId}") {
+        fun createRoute(orderId: String? = null): String {
+            return if (orderId != null) "payment?orderId=$orderId" else "payment"
+        }
+    }
     object Catering : Screen("catering")
     object Customization : Screen("customization/{productId}") {
         fun createRoute(productId: String) = "customization/$productId"
     }
+    object OrderList : Screen("order-list")
     object Settings : Screen("settings")
+    object OrderDetail : Screen("orderDetail/{orderId}") {
+        fun createRoute(orderId: String) = "orderDetail/$orderId"
+    }
 }
 
 @Composable
@@ -67,32 +81,56 @@ fun NavGraph(
         composable(Screen.Menu.route) {
             MenuScreen(
                 onNavigateToCart = {
-                    navController.navigate(Screen.Cart.route)
+                    navController.navigate(Screen.Cart.createRoute())
                 },
                 onNavigateToCustomization = { productId ->
                     navController.navigate(Screen.Customization.createRoute(productId))
                 },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onNavigateToOrderList = {
+                    navController.navigate(Screen.OrderList.route) {
+                        launchSingleTop = true
+                    }
                 }
             )
         }
 
-        composable(Screen.Cart.route) {
+        composable(
+            route = Screen.Cart.route,
+            arguments = listOf(navArgument("editOrderId") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            })
+        ) {
             CartScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 },
                 onNavigateToPayment = {
-                    navController.navigate(Screen.Payment.route)
+                    navController.navigate(Screen.Payment.createRoute())
                 },
                 onNavigateToCatering = {
                     navController.navigate(Screen.Catering.route)
+                },
+                onNavigateToOrderDetail = { orderId ->
+                    navController.navigate(Screen.OrderDetail.createRoute(orderId)) {
+                        popUpTo(Screen.Menu.route)
+                    }
                 }
             )
         }
 
-        composable(Screen.Payment.route) {
+        composable(
+            route = Screen.Payment.route,
+            arguments = listOf(navArgument("orderId") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            })
+        ) {
             PaymentScreen(
                 onNavigateBack = {
                     navController.popBackStack()
@@ -100,6 +138,11 @@ fun NavGraph(
                 onNavigateToMenu = {
                     navController.navigate(Screen.Menu.route) {
                         popUpTo(Screen.Menu.route) { inclusive = true }
+                    }
+                },
+                onNavigateToOrderDetail = { orderId ->
+                    navController.navigate(Screen.OrderDetail.createRoute(orderId)) {
+                        popUpTo(Screen.Menu.route)
                     }
                 }
             )
@@ -110,10 +153,21 @@ fun NavGraph(
                 onNavigateBack = {
                     navController.popBackStack()
                 },
-                onNavigateToMenu = {
-                    navController.navigate(Screen.Menu.route) {
-                        popUpTo(Screen.Menu.route) { inclusive = true }
+                onNavigateToOrderDetail = { orderId ->
+                    navController.navigate(Screen.OrderDetail.createRoute(orderId)) {
+                        popUpTo(Screen.Menu.route)
                     }
+                }
+            )
+        }
+
+        composable(Screen.OrderList.route) {
+            OrderListScreen(
+                onOrderClick = { orderId ->
+                    navController.navigate(Screen.OrderDetail.createRoute(orderId))
+                },
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }
@@ -133,6 +187,25 @@ fun NavGraph(
             PrinterSettingsScreen(
                 onNavigateBack = {
                     navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = Screen.OrderDetail.route,
+            arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+        ) {
+            OrderDetailScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onPay = { orderId ->
+                    navController.navigate(Screen.Payment.createRoute(orderId = orderId))
+                },
+                onEdit = { orderId ->
+                    navController.navigate(Screen.Cart.createRoute(editOrderId = orderId)) {
+                        popUpTo(Screen.Menu.route)
+                    }
                 }
             )
         }

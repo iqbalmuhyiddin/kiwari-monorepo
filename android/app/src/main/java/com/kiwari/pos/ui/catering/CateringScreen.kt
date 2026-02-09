@@ -20,7 +20,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
@@ -73,7 +72,7 @@ import java.time.ZoneId
 fun CateringScreen(
     viewModel: CateringViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {},
-    onNavigateToMenu: () -> Unit = {}
+    onNavigateToOrderDetail: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -91,12 +90,11 @@ fun CateringScreen(
         }
     }
 
-    if (uiState.isSuccess) {
-        CateringSuccessScreen(
-            orderNumber = uiState.orderNumber,
-            onDone = onNavigateToMenu
-        )
-        return
+    LaunchedEffect(uiState.completedOrderId) {
+        uiState.completedOrderId?.let { orderId ->
+            viewModel.clearCompletedOrderId()
+            onNavigateToOrderDetail(orderId)
+        }
     }
 
     Scaffold(
@@ -658,59 +656,3 @@ private fun CateringBottomSection(
     }
 }
 
-@Composable
-private fun CateringSuccessScreen(
-    orderNumber: String,
-    onDone: () -> Unit
-) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = null,
-                modifier = Modifier.size(72.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = "Booking Berhasil!",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "No. Pesanan: $orderNumber",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "DP telah dicatat",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = onDone,
-                modifier = Modifier
-                    .fillMaxWidth(0.6f)
-                    .height(48.dp),
-                shape = MaterialTheme.shapes.small,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            ) {
-                Text(
-                    text = "KEMBALI KE MENU",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
-}

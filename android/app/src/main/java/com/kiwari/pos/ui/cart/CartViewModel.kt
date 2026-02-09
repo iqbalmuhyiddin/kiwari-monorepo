@@ -1,14 +1,24 @@
 package com.kiwari.pos.ui.cart
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kiwari.pos.data.model.AddOrderItemRequest
 import com.kiwari.pos.data.model.CartItem
+import com.kiwari.pos.data.model.CreateOrderItemModifierRequest
+import com.kiwari.pos.data.model.CreateOrderItemRequest
+import com.kiwari.pos.data.model.CreateOrderRequest
 import com.kiwari.pos.data.model.Customer
 import com.kiwari.pos.data.model.Result
+import com.kiwari.pos.data.model.SelectedModifier
+import com.kiwari.pos.data.model.SelectedVariant
+import com.kiwari.pos.data.model.UpdateOrderItemRequest
 import com.kiwari.pos.data.repository.CartRepository
 import com.kiwari.pos.data.repository.CustomerRepository
+import com.kiwari.pos.data.repository.MenuRepository
 import com.kiwari.pos.data.repository.OrderMetadata
 import com.kiwari.pos.data.repository.OrderMetadataRepository
+import com.kiwari.pos.data.repository.OrderRepository
 import com.kiwari.pos.util.coerceAtLeast
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
@@ -59,7 +69,15 @@ data class CartUiState(
     val customerError: String? = null,
     // Edit item notes dialog
     val editingCartItemId: String? = null,
-    val editingNotes: String = ""
+    val editingNotes: String = "",
+    // Save order (SIMPAN)
+    val isSaving: Boolean = false,
+    val savedOrderId: String? = null,
+    val saveError: String? = null,
+    // Edit mode
+    val editingOrderId: String? = null,
+    val editingOrderNumber: String? = null,
+    val isLoadingOrder: Boolean = false
 )
 
 @OptIn(FlowPreview::class)
@@ -67,7 +85,10 @@ data class CartUiState(
 class CartViewModel @Inject constructor(
     private val cartRepository: CartRepository,
     private val customerRepository: CustomerRepository,
-    private val orderMetadataRepository: OrderMetadataRepository
+    private val orderMetadataRepository: OrderMetadataRepository,
+    private val orderRepository: OrderRepository,
+    private val menuRepository: MenuRepository,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CartUiState())
@@ -78,6 +99,10 @@ class CartViewModel @Inject constructor(
     init {
         observeCart()
         observeCustomerSearch()
+        // Check if entering edit mode from navigation argument
+        savedStateHandle.get<String>("editOrderId")?.let { orderId ->
+            loadOrder(orderId)
+        }
     }
 
     private fun observeCart() {
@@ -357,6 +382,388 @@ class CartViewModel @Inject constructor(
             )
         )
         return true
+    }
+
+    /**
+     * Save order without payment (SIMPAN button).
+     * In edit mode, computes a diff and calls add/update/delete item APIs.
+     * Otherwise, creates a new order via API.
+     */
+    fun saveOrder() {
+        if (cartRepository.isEditing()) {
+            saveOrderEdits()
+        } else {
+            saveNewOrder()
+        }
+    }
+
+    private fun saveNewOrder() {
+        val state = _uiState.value
+        if (state.cartItems.isEmpty() || state.isSaving) return
+
+        // Validate catering requires customer
+        if (state.orderType == OrderType.CATERING && state.selectedCustomer == null) {
+            _uiState.update { it.copy(cateringCustomerError = true) }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSaving = true, saveError = null, savedOrderId = null) }
+
+            val request = buildCreateOrderRequest(state)
+            when (val result = orderRepository.createOrder(request)) {
+                is Result.Success -> {
+                    cartRepository.clearCart()
+                    orderMetadataRepository.clear()
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            savedOrderId = result.data.id
+                        )
+                    }
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            saveError = result.message
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Load an existing order into the cart for editing.
+     * Fetches order detail + product data, converts items to CartItems.
+     */
+    fun loadOrder(orderId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingOrder = true) }
+
+            // 1. Fetch order detail
+            val orderResult = orderRepository.getOrder(orderId)
+            if (orderResult is Result.Error) {
+                _uiState.update {
+                    it.copy(isLoadingOrder = false, saveError = orderResult.message)
+                }
+                return@launch
+            }
+            val order = (orderResult as Result.Success).data
+
+            // 2. Fetch all products to resolve product data for cart items
+            val productsResult = menuRepository.getProducts()
+            if (productsResult is Result.Error) {
+                _uiState.update {
+                    it.copy(isLoadingOrder = false, saveError = productsResult.message)
+                }
+                return@launch
+            }
+            val products = (productsResult as Result.Success).data
+            val productMap = products.associateBy { it.id }
+
+            // 3. Convert order items to CartItems
+            val cartItems = order.items.mapNotNull { orderItem ->
+                val product = productMap[orderItem.productId] ?: return@mapNotNull null
+
+                // Calculate modifier total for this item
+                val modifierTotal = orderItem.modifiers.fold(BigDecimal.ZERO) { acc, mod ->
+                    acc.add(BigDecimal(mod.unitPrice).multiply(BigDecimal(mod.quantity)))
+                }
+
+                val selectedVariants = if (orderItem.variantId != null) {
+                    // Compute actual variant price adjustment
+                    val variantAdjustment = BigDecimal(orderItem.unitPrice)
+                        .subtract(BigDecimal(product.basePrice))
+                        .subtract(modifierTotal)
+
+                    listOf(
+                        SelectedVariant(
+                            variantGroupId = "",
+                            variantGroupName = "Varian",
+                            variantId = orderItem.variantId,
+                            variantName = "Varian",
+                            priceAdjustment = variantAdjustment
+                        )
+                    )
+                } else {
+                    emptyList()
+                }
+
+                val selectedModifiers = orderItem.modifiers.map { mod ->
+                    SelectedModifier(
+                        modifierGroupId = "",
+                        modifierGroupName = "Tambahan",
+                        modifierId = mod.modifierId,
+                        modifierName = "Tambahan",
+                        price = BigDecimal(mod.unitPrice)
+                    )
+                }
+
+                CartItem(
+                    id = orderItem.id, // Keep server UUID for diffing
+                    product = product,
+                    selectedVariants = selectedVariants,
+                    selectedModifiers = selectedModifiers,
+                    quantity = orderItem.quantity,
+                    notes = orderItem.notes ?: "",
+                    lineTotal = BigDecimal(orderItem.subtotal)
+                )
+            }
+
+            // 4. Load items into cart and set edit mode
+            cartRepository.setItems(cartItems)
+            cartRepository.setEditMode(orderId, order.orderNumber)
+
+            // 5. Set order metadata from the order detail
+            val orderType = try {
+                OrderType.valueOf(order.orderType)
+            } catch (_: IllegalArgumentException) {
+                OrderType.DINE_IN
+            }
+            val discountType = order.discountType?.let {
+                try {
+                    DiscountType.valueOf(it)
+                } catch (_: IllegalArgumentException) {
+                    null
+                }
+            }
+
+            _uiState.update {
+                it.copy(
+                    orderType = orderType,
+                    tableNumber = order.tableNumber ?: "",
+                    discountType = discountType,
+                    discountValue = order.discountValue ?: "",
+                    orderNotes = order.notes ?: "",
+                    editingOrderId = orderId,
+                    editingOrderNumber = order.orderNumber,
+                    isLoadingOrder = false
+                )
+            }
+        }
+    }
+
+    /**
+     * Compute diff between original items and current cart, then apply changes via API.
+     */
+    private fun saveOrderEdits() {
+        val state = _uiState.value
+        val orderId = cartRepository.editingOrderId ?: return
+        if (state.isSaving) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSaving = true, saveError = null, savedOrderId = null) }
+
+            val originalItems = cartRepository.getOriginalItems()
+            val currentItems = cartRepository.items.value
+
+            val originalIds = originalItems.map { it.id }.toSet()
+            val currentIds = currentItems.map { it.id }.toSet()
+
+            // Items removed during edit (in original but not in current)
+            val removed = originalItems.filter { it.id !in currentIds }
+            // Items added during edit (in current but not in original)
+            val added = currentItems.filter { it.id !in originalIds }
+            // Items that exist in both but may have changed quantity or notes
+            val updated = currentItems.filter { current ->
+                current.id in originalIds && originalItems.any { orig ->
+                    orig.id == current.id &&
+                            (orig.quantity != current.quantity || orig.notes != current.notes)
+                }
+            }
+
+            try {
+                // Delete removed items
+                for (item in removed) {
+                    when (val result = orderRepository.deleteOrderItem(orderId, item.id)) {
+                        is Result.Error -> {
+                            // Re-fetch order to sync with server after partial changes
+                            reloadOrderAfterPartialSave(orderId)
+                            _uiState.update {
+                                it.copy(isSaving = false, saveError = "Sebagian perubahan tersimpan. ${result.message}")
+                            }
+                            return@launch
+                        }
+                        is Result.Success -> { /* continue */ }
+                    }
+                }
+
+                // Update modified items
+                for (item in updated) {
+                    val request = UpdateOrderItemRequest(
+                        quantity = item.quantity,
+                        notes = item.notes.ifBlank { null }
+                    )
+                    when (val result = orderRepository.updateOrderItem(orderId, item.id, request)) {
+                        is Result.Error -> {
+                            // Re-fetch order to sync with server after partial changes
+                            reloadOrderAfterPartialSave(orderId)
+                            _uiState.update {
+                                it.copy(isSaving = false, saveError = "Sebagian perubahan tersimpan. ${result.message}")
+                            }
+                            return@launch
+                        }
+                        is Result.Success -> { /* continue */ }
+                    }
+                }
+
+                // Add new items
+                for (item in added) {
+                    val request = AddOrderItemRequest(
+                        productId = item.product.id,
+                        variantId = item.selectedVariants.firstOrNull()?.variantId,
+                        quantity = item.quantity,
+                        notes = item.notes.ifBlank { null },
+                        modifiers = item.selectedModifiers.map { mod ->
+                            CreateOrderItemModifierRequest(
+                                modifierId = mod.modifierId,
+                                quantity = 1
+                            )
+                        }.ifEmpty { null }
+                    )
+                    when (val result = orderRepository.addOrderItem(orderId, request)) {
+                        is Result.Error -> {
+                            // Re-fetch order to sync with server after partial changes
+                            reloadOrderAfterPartialSave(orderId)
+                            _uiState.update {
+                                it.copy(isSaving = false, saveError = "Sebagian perubahan tersimpan. ${result.message}")
+                            }
+                            return@launch
+                        }
+                        is Result.Success -> { /* continue */ }
+                    }
+                }
+
+                // All API calls succeeded — clear cart and navigate
+                cartRepository.clearCart()
+                cartRepository.clearEditMode()
+                orderMetadataRepository.clear()
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        savedOrderId = orderId,
+                        editingOrderId = null,
+                        editingOrderNumber = null
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        saveError = e.message ?: "Gagal menyimpan perubahan"
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Re-fetch and reload order after partial save failure to sync UI with server.
+     */
+    private suspend fun reloadOrderAfterPartialSave(orderId: String) {
+        when (val result = orderRepository.getOrder(orderId)) {
+            is Result.Success -> {
+                val order = result.data
+                // Rebuild product map from current cart items (already loaded)
+                val productMap = _uiState.value.cartItems.associate { it.product.id to it.product }
+                val cartItems = order.items.mapNotNull { orderItem ->
+                    val product = productMap[orderItem.productId] ?: return@mapNotNull null
+                    val modifierTotal = orderItem.modifiers.fold(BigDecimal.ZERO) { acc, mod ->
+                        acc.add(BigDecimal(mod.unitPrice).multiply(BigDecimal(mod.quantity)))
+                    }
+                    val variantAdjustment = BigDecimal(orderItem.unitPrice)
+                        .subtract(BigDecimal(product.basePrice))
+                        .subtract(modifierTotal)
+                    CartItem(
+                        id = orderItem.id,
+                        product = product,
+                        selectedVariants = if (orderItem.variantId != null) {
+                            listOf(SelectedVariant(
+                                variantGroupId = "",
+                                variantGroupName = "Varian",
+                                variantId = orderItem.variantId,
+                                variantName = "Varian",
+                                priceAdjustment = variantAdjustment
+                            ))
+                        } else emptyList(),
+                        selectedModifiers = orderItem.modifiers.map { mod ->
+                            SelectedModifier(
+                                modifierGroupId = "",
+                                modifierGroupName = "Tambahan",
+                                modifierId = mod.modifierId,
+                                modifierName = "Tambahan",
+                                price = BigDecimal(mod.unitPrice)
+                            )
+                        },
+                        quantity = orderItem.quantity,
+                        notes = orderItem.notes ?: "",
+                        lineTotal = BigDecimal(orderItem.subtotal)
+                    )
+                }
+                cartRepository.setItems(cartItems)
+                cartRepository.setEditMode(orderId, order.orderNumber)
+            }
+            is Result.Error -> {
+                // If we can't even refetch, force exit edit mode
+                cartRepository.clearEditMode()
+                cartRepository.clearCart()
+            }
+        }
+    }
+
+    /**
+     * Exit edit mode without saving — clears cart and edit state.
+     */
+    fun exitEditMode() {
+        cartRepository.clearEditMode()
+        cartRepository.clearCart()
+        orderMetadataRepository.clear()
+        _uiState.update {
+            it.copy(editingOrderId = null, editingOrderNumber = null)
+        }
+    }
+
+    fun clearSavedOrderId() {
+        _uiState.update { it.copy(savedOrderId = null) }
+    }
+
+    fun clearSaveError() {
+        _uiState.update { it.copy(saveError = null) }
+    }
+
+    private fun buildCreateOrderRequest(state: CartUiState): CreateOrderRequest {
+        val items = state.cartItems.map { cartItem ->
+            CreateOrderItemRequest(
+                productId = cartItem.product.id,
+                variantId = cartItem.selectedVariants.firstOrNull()?.variantId,
+                quantity = cartItem.quantity,
+                notes = cartItem.notes.ifBlank { null },
+                modifiers = cartItem.selectedModifiers.map { mod ->
+                    CreateOrderItemModifierRequest(
+                        modifierId = mod.modifierId,
+                        quantity = 1
+                    )
+                }.ifEmpty { null }
+            )
+        }
+
+        return CreateOrderRequest(
+            orderType = state.orderType.name,
+            tableNumber = state.tableNumber.ifBlank { null },
+            customerId = state.selectedCustomer?.id,
+            notes = state.orderNotes.ifBlank { null },
+            discountType = state.discountType?.name,
+            discountValue = if (state.discountType != null && state.discountValue.isNotBlank()) {
+                state.discountValue
+            } else null,
+            cateringDate = null,
+            cateringDpAmount = null,
+            deliveryPlatform = null,
+            deliveryAddress = null,
+            items = items
+        )
     }
 
     private fun calculateDiscountAmount(

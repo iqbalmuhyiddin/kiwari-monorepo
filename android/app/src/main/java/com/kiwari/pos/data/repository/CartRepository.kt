@@ -23,6 +23,37 @@ class CartRepository @Inject constructor() {
     private val _items = MutableStateFlow<List<CartItem>>(emptyList())
     val items: StateFlow<List<CartItem>> = _items.asStateFlow()
 
+    // ── Edit mode state ──────────────────────────
+    @Volatile
+    private var _originalItems: List<CartItem> = emptyList()
+    @Volatile
+    private var _editingOrderId: String? = null
+    @Volatile
+    private var _editingOrderNumber: String? = null
+
+    val editingOrderId: String? get() = _editingOrderId
+    val editingOrderNumber: String? get() = _editingOrderNumber
+
+    fun setEditMode(orderId: String, orderNumber: String) {
+        _editingOrderId = orderId
+        _editingOrderNumber = orderNumber
+        _originalItems = _items.value.toList()
+    }
+
+    fun getOriginalItems(): List<CartItem> = _originalItems
+
+    fun clearEditMode() {
+        _editingOrderId = null
+        _editingOrderNumber = null
+        _originalItems = emptyList()
+    }
+
+    fun isEditing(): Boolean = _editingOrderId != null
+
+    fun setItems(items: List<CartItem>) {
+        _items.update { items }
+    }
+
     /**
      * Add a simple product (no variants/modifiers) to cart.
      * If an identical simple product already exists, increment quantity.

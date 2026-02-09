@@ -1,5 +1,6 @@
 package com.kiwari.pos.ui.cart
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,16 +38,21 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -65,21 +71,56 @@ fun CartScreen(
     viewModel: CartViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {},
     onNavigateToPayment: () -> Unit = {},
-    onNavigateToCatering: () -> Unit = {}
+    onNavigateToCatering: () -> Unit = {},
+    onNavigateToOrderDetail: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Navigate to Order Detail after SIMPAN succeeds
+    LaunchedEffect(uiState.savedOrderId) {
+        uiState.savedOrderId?.let { orderId ->
+            viewModel.clearSavedOrderId()
+            onNavigateToOrderDetail(orderId)
+        }
+    }
+
+    // Show save error as snackbar
+    LaunchedEffect(uiState.saveError) {
+        uiState.saveError?.let { error ->
+            viewModel.clearSaveError()
+            snackbarHostState.showSnackbar(error)
+        }
+    }
+
+    val isEditing = uiState.editingOrderId != null
+
+    // Handle system back button in edit mode
+    BackHandler(enabled = uiState.editingOrderId != null) {
+        viewModel.exitEditMode()
+        onNavigateBack()
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Keranjang",
+                        text = if (uiState.editingOrderNumber != null) {
+                            "Edit #${uiState.editingOrderNumber}"
+                        } else {
+                            "Keranjang"
+                        },
                         fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = {
+                        if (isEditing) {
+                            viewModel.exitEditMode()
+                        }
+                        onNavigateBack()
+                    }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Kembali"
@@ -92,6 +133,7 @@ fun CartScreen(
                 )
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             CartBottomSection(
                 subtotal = uiState.subtotal,
@@ -100,6 +142,9 @@ fun CartScreen(
                 hasDiscount = uiState.discountType != null && uiState.discountValue.isNotBlank(),
                 isCartEmpty = uiState.cartItems.isEmpty(),
                 isCatering = uiState.orderType == OrderType.CATERING,
+                isSaving = uiState.isSaving,
+                isEditing = isEditing,
+                onSave = { viewModel.saveOrder() },
                 onPay = {
                     if (viewModel.validateForPayment()) {
                         if (uiState.orderType == OrderType.CATERING) {
@@ -112,7 +157,24 @@ fun CartScreen(
             )
         }
     ) { paddingValues ->
-        if (uiState.cartItems.isEmpty()) {
+        if (uiState.isLoadingOrder) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Memuat pesanan...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else if (uiState.cartItems.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -134,16 +196,18 @@ fun CartScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Order type section
-                item {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    OrderTypeSection(
-                        selectedType = uiState.orderType,
-                        onTypeSelected = viewModel::onOrderTypeChanged
-                    )
+                if (!isEditing) {
+                    item {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OrderTypeSection(
+                            selectedType = uiState.orderType,
+                            onTypeSelected = viewModel::onOrderTypeChanged
+                        )
+                    }
                 }
 
                 // Table number (dine-in only)
-                if (uiState.orderType == OrderType.DINE_IN) {
+                if (uiState.orderType == OrderType.DINE_IN && !isEditing) {
                     item {
                         OutlinedTextField(
                             value = uiState.tableNumber,
@@ -158,21 +222,23 @@ fun CartScreen(
                 }
 
                 // Customer section
-                item {
-                    CustomerSection(
-                        searchQuery = uiState.customerSearchQuery,
-                        selectedCustomer = uiState.selectedCustomer,
-                        searchResults = uiState.customerSearchResults,
-                        isSearching = uiState.isSearchingCustomers,
-                        showDropdown = uiState.showCustomerDropdown,
-                        hasError = uiState.cateringCustomerError,
-                        isCatering = uiState.orderType == OrderType.CATERING,
-                        onQueryChanged = viewModel::onCustomerSearchQueryChanged,
-                        onCustomerSelected = viewModel::onCustomerSelected,
-                        onCustomerCleared = viewModel::onCustomerCleared,
-                        onDropdownDismissed = viewModel::onCustomerDropdownDismissed,
-                        onAddNewCustomer = viewModel::onShowNewCustomerDialog
-                    )
+                if (!isEditing) {
+                    item {
+                        CustomerSection(
+                            searchQuery = uiState.customerSearchQuery,
+                            selectedCustomer = uiState.selectedCustomer,
+                            searchResults = uiState.customerSearchResults,
+                            isSearching = uiState.isSearchingCustomers,
+                            showDropdown = uiState.showCustomerDropdown,
+                            hasError = uiState.cateringCustomerError,
+                            isCatering = uiState.orderType == OrderType.CATERING,
+                            onQueryChanged = viewModel::onCustomerSearchQueryChanged,
+                            onCustomerSelected = viewModel::onCustomerSelected,
+                            onCustomerCleared = viewModel::onCustomerCleared,
+                            onDropdownDismissed = viewModel::onCustomerDropdownDismissed,
+                            onAddNewCustomer = viewModel::onShowNewCustomerDialog
+                        )
+                    }
                 }
 
                 // Cart items header
@@ -201,26 +267,30 @@ fun CartScreen(
                 }
 
                 // Discount section
-                item {
-                    DiscountSection(
-                        discountType = uiState.discountType,
-                        discountValue = uiState.discountValue,
-                        onDiscountTypeChanged = viewModel::onDiscountTypeChanged,
-                        onDiscountValueChanged = viewModel::onDiscountValueChanged
-                    )
+                if (!isEditing) {
+                    item {
+                        DiscountSection(
+                            discountType = uiState.discountType,
+                            discountValue = uiState.discountValue,
+                            onDiscountTypeChanged = viewModel::onDiscountTypeChanged,
+                            onDiscountValueChanged = viewModel::onDiscountValueChanged
+                        )
+                    }
                 }
 
                 // Order notes
-                item {
-                    OutlinedTextField(
-                        value = uiState.orderNotes,
-                        onValueChange = viewModel::onOrderNotesChanged,
-                        label = { Text("Catatan pesanan") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.extraSmall,
-                        minLines = 2,
-                        maxLines = 3
-                    )
+                if (!isEditing) {
+                    item {
+                        OutlinedTextField(
+                            value = uiState.orderNotes,
+                            onValueChange = viewModel::onOrderNotesChanged,
+                            label = { Text("Catatan pesanan") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.extraSmall,
+                            minLines = 2,
+                            maxLines = 3
+                        )
+                    }
                 }
 
                 // Bottom spacer
@@ -551,6 +621,9 @@ private fun CartBottomSection(
     hasDiscount: Boolean,
     isCartEmpty: Boolean,
     isCatering: Boolean = false,
+    isSaving: Boolean = false,
+    isEditing: Boolean = false,
+    onSave: () -> Unit = {},
     onPay: () -> Unit
 ) {
     Surface(
@@ -624,24 +697,100 @@ private fun CartBottomSection(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Pay button
-            Button(
-                onClick = onPay,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                enabled = !isCartEmpty,
-                shape = MaterialTheme.shapes.small,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            ) {
-                Text(
-                    text = if (isCatering) "LANJUT BOOKING" else "BAYAR",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+            if (isEditing) {
+                // Edit mode: single SIMPAN PERUBAHAN button
+                Button(
+                    onClick = onSave,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    enabled = !isCartEmpty && !isSaving,
+                    shape = MaterialTheme.shapes.small,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    if (isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text(
+                            text = "SIMPAN PERUBAHAN",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            } else if (isCatering) {
+                // Catering: single LANJUT BOOKING button (unchanged)
+                Button(
+                    onClick = onPay,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    enabled = !isCartEmpty,
+                    shape = MaterialTheme.shapes.small,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text(
+                        text = "LANJUT BOOKING",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            } else {
+                // Non-catering: SIMPAN + BAYAR side by side
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onSave,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
+                        enabled = !isCartEmpty && !isSaving,
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        if (isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = "SIMPAN",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    Button(
+                        onClick = onPay,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
+                        enabled = !isCartEmpty && !isSaving,
+                        shape = MaterialTheme.shapes.small,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
+                        Text(
+                            text = "BAYAR",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
     }
