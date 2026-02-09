@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/kiwari-pos/api/internal/database"
+	"github.com/kiwari-pos/api/internal/enum"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -175,7 +176,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Email:          req.Email,
 		HashedPassword: string(hashed),
 		FullName:       req.FullName,
-		Role:           database.UserRole(req.Role),
+		Role:           req.Role,
 		Pin:            pin,
 	})
 	if err != nil {
@@ -247,7 +248,7 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	user, err := h.store.UpdateUser(r.Context(), database.UpdateUserParams{
 		Email:    req.Email,
 		FullName: req.FullName,
-		Role:     database.UserRole(req.Role),
+		Role:     req.Role,
 		Pin:      pin,
 		ID:       userID,
 		OutletID: outletID,
@@ -303,9 +304,9 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 // --- Helpers ---
 
 func isValidRole(role string) bool {
-	switch database.UserRole(role) {
-	case database.UserRoleOWNER, database.UserRoleMANAGER,
-		database.UserRoleCASHIER, database.UserRoleKITCHEN:
+	switch role {
+	case enum.UserRoleOwner, enum.UserRoleManager,
+		enum.UserRoleCashier, enum.UserRoleKitchen:
 		return true
 	}
 	return false

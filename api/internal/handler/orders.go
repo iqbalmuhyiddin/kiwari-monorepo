@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/kiwari-pos/api/internal/database"
+	"github.com/kiwari-pos/api/internal/enum"
 	"github.com/kiwari-pos/api/internal/middleware"
 	"github.com/kiwari-pos/api/internal/service"
 	"github.com/shopspring/decimal"
@@ -368,10 +369,10 @@ func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s := r.URL.Query().Get("status"); s != "" {
-		params.Status = database.NullOrderStatus{OrderStatus: database.OrderStatus(s), Valid: true}
+		params.Status = pgtype.Text{String: s, Valid: true}
 	}
 	if s := r.URL.Query().Get("type"); s != "" {
-		params.OrderType = database.NullOrderType{OrderType: database.OrderType(s), Valid: true}
+		params.OrderType = pgtype.Text{String: s, Valid: true}
 	}
 	if s := r.URL.Query().Get("start_date"); s != "" {
 		t, err := time.Parse("2006-01-02", s)
@@ -574,8 +575,7 @@ func (h *OrderHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newStatus := database.OrderStatus(req.Status)
-	if !isValidOrderStatus(newStatus) {
+	if !isValidOrderStatus(req.Status) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid status"})
 		return
 	}
@@ -595,7 +595,7 @@ func (h *OrderHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validateStatusTransition(current.Status, newStatus); err != nil {
+	if err := validateStatusTransition(current.Status, req.Status); err != nil {
 		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
 		return
 	}
@@ -603,7 +603,7 @@ func (h *OrderHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	updated, err := h.store.UpdateOrderStatus(r.Context(), database.UpdateOrderStatusParams{
 		ID:       orderID,
 		OutletID: outletID,
-		Status:   newStatus,
+		Status:   req.Status,
 		Status_2: current.Status,
 	})
 	if err != nil {
@@ -664,11 +664,11 @@ func (h *OrderHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			// Order exists but couldn't be cancelled due to status
-			if current.Status == database.OrderStatusCOMPLETED {
+			if current.Status == enum.OrderStatusCompleted {
 				writeJSON(w, http.StatusConflict, map[string]string{"error": "cannot cancel a completed order"})
 				return
 			}
-			if current.Status == database.OrderStatusCANCELLED {
+			if current.Status == enum.OrderStatusCancelled {
 				writeJSON(w, http.StatusConflict, map[string]string{"error": "order is already cancelled"})
 				return
 			}
@@ -735,7 +735,7 @@ func (h *OrderHandler) AddItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if order.Status != database.OrderStatusNEW {
+	if order.Status != enum.OrderStatusNew {
 		writeJSON(w, http.StatusConflict, map[string]string{"error": "can only add items to NEW orders"})
 		return
 	}
@@ -847,11 +847,11 @@ func (h *OrderHandler) AddItem(w http.ResponseWriter, r *http.Request) {
 	itemSubtotal = itemSubtotal.Add(modifierSubtotal)
 
 	// Apply item-level discount if provided
-	var discountType database.NullDiscountType
+	var discountType pgtype.Text
 	var discountValue pgtype.Numeric
 	var discountAmount decimal.Decimal
 	if req.DiscountType != "" {
-		discountType = database.NullDiscountType{DiscountType: database.DiscountType(req.DiscountType), Valid: true}
+		discountType = pgtype.Text{String: req.DiscountType, Valid: true}
 		if req.DiscountValue == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "discount_value is required when discount_type is set"})
 			return
@@ -862,9 +862,9 @@ func (h *OrderHandler) AddItem(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		discountValue = decimalToNumeric(dv)
-		if database.DiscountType(req.DiscountType) == database.DiscountTypePERCENTAGE {
+		if req.DiscountType == enum.DiscountTypePercentage {
 			discountAmount = itemSubtotal.Mul(dv).Div(decimal.NewFromInt(100))
-		} else if database.DiscountType(req.DiscountType) == database.DiscountTypeFIXEDAMOUNT {
+		} else if req.DiscountType == enum.DiscountTypeFixed {
 			discountAmount = dv
 			if discountAmount.GreaterThan(itemSubtotal) {
 				discountAmount = itemSubtotal
@@ -1002,7 +1002,7 @@ func (h *OrderHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if order.Status != database.OrderStatusNEW {
+	if order.Status != enum.OrderStatusNew {
 		writeJSON(w, http.StatusConflict, map[string]string{"error": "can only update items in NEW orders"})
 		return
 	}
@@ -1043,9 +1043,9 @@ func (h *OrderHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	var discountAmount decimal.Decimal
 	if currentItem.DiscountType.Valid {
 		discountValue, _ := numericToDecimal(currentItem.DiscountValue)
-		if currentItem.DiscountType.DiscountType == database.DiscountTypePERCENTAGE {
+		if currentItem.DiscountType.String == enum.DiscountTypePercentage {
 			discountAmount = newSubtotalBeforeDiscount.Mul(discountValue).Div(decimal.NewFromInt(100))
-		} else if currentItem.DiscountType.DiscountType == database.DiscountTypeFIXEDAMOUNT {
+		} else if currentItem.DiscountType.String == enum.DiscountTypeFixed {
 			discountAmount = discountValue
 			if discountAmount.GreaterThan(newSubtotalBeforeDiscount) {
 				discountAmount = newSubtotalBeforeDiscount
@@ -1151,7 +1151,7 @@ func (h *OrderHandler) RemoveItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if order.Status != database.OrderStatusNEW {
+	if order.Status != enum.OrderStatusNew {
 		writeJSON(w, http.StatusConflict, map[string]string{"error": "can only remove items from NEW orders"})
 		return
 	}
@@ -1264,8 +1264,7 @@ func (h *OrderHandler) UpdateItemStatus(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	newStatus := database.OrderItemStatus(req.Status)
-	if !isValidItemStatus(newStatus) {
+	if !isValidItemStatus(req.Status) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid status"})
 		return
 	}
@@ -1286,8 +1285,8 @@ func (h *OrderHandler) UpdateItemStatus(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Cannot update items on cancelled or completed orders
-	if order.Status == database.OrderStatusCANCELLED || order.Status == database.OrderStatusCOMPLETED {
-		writeJSON(w, http.StatusConflict, map[string]string{"error": "cannot update items on a " + string(order.Status) + " order"})
+	if order.Status == enum.OrderStatusCancelled || order.Status == enum.OrderStatusCompleted {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "cannot update items on a " + order.Status + " order"})
 		return
 	}
 
@@ -1307,7 +1306,7 @@ func (h *OrderHandler) UpdateItemStatus(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Validate status transition
-	if err := validateItemStatusTransition(currentItem.Status, newStatus); err != nil {
+	if err := validateItemStatusTransition(currentItem.Status, req.Status); err != nil {
 		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
 		return
 	}
@@ -1316,7 +1315,7 @@ func (h *OrderHandler) UpdateItemStatus(w http.ResponseWriter, r *http.Request) 
 	updatedItem, err := h.store.UpdateOrderItemStatus(r.Context(), database.UpdateOrderItemStatusParams{
 		ID:      itemID,
 		OrderID: orderID,
-		Status:  newStatus,
+		Status:  req.Status,
 	})
 	if err != nil {
 		log.Printf("ERROR: update order item status: %v", err)
@@ -1422,7 +1421,7 @@ func toOrderResponse(result *service.CreateOrderResult) orderResponse {
 		resp.Notes = &o.Notes.String
 	}
 	if o.DiscountType.Valid {
-		s := string(o.DiscountType.DiscountType)
+		s := o.DiscountType.String
 		resp.DiscountType = &s
 	}
 	if o.DiscountValue.Valid {
@@ -1433,7 +1432,7 @@ func toOrderResponse(result *service.CreateOrderResult) orderResponse {
 		resp.CateringDate = &o.CateringDate.Time
 	}
 	if o.CateringStatus.Valid {
-		s := string(o.CateringStatus.CateringStatus)
+		s := string(o.CateringStatus.String)
 		resp.CateringStatus = &s
 	}
 	if o.CateringDpAmount.Valid {
@@ -1472,7 +1471,7 @@ func toOrderItemResponse(ir service.OrderItemResult) orderItemResponse {
 		resp.VariantID = &s
 	}
 	if item.DiscountType.Valid {
-		s := string(item.DiscountType.DiscountType)
+		s := item.DiscountType.String
 		resp.DiscountType = &s
 	}
 	if item.DiscountValue.Valid {
@@ -1483,7 +1482,7 @@ func toOrderItemResponse(ir service.OrderItemResult) orderItemResponse {
 		resp.Notes = &item.Notes.String
 	}
 	if item.Station.Valid {
-		s := string(item.Station.KitchenStation)
+		s := string(item.Station.String)
 		resp.Station = &s
 	}
 
@@ -1545,7 +1544,7 @@ func dbOrderToResponse(o database.Order) orderResponse {
 		resp.Notes = &o.Notes.String
 	}
 	if o.DiscountType.Valid {
-		s := string(o.DiscountType.DiscountType)
+		s := o.DiscountType.String
 		resp.DiscountType = &s
 	}
 	if o.DiscountValue.Valid {
@@ -1556,7 +1555,7 @@ func dbOrderToResponse(o database.Order) orderResponse {
 		resp.CateringDate = &o.CateringDate.Time
 	}
 	if o.CateringStatus.Valid {
-		s := string(o.CateringStatus.CateringStatus)
+		s := string(o.CateringStatus.String)
 		resp.CateringStatus = &s
 	}
 	if o.CateringDpAmount.Valid {
@@ -1590,7 +1589,7 @@ func dbOrderItemToResponse(item database.OrderItem, mods []database.OrderItemMod
 		resp.VariantID = &s
 	}
 	if item.DiscountType.Valid {
-		s := string(item.DiscountType.DiscountType)
+		s := item.DiscountType.String
 		resp.DiscountType = &s
 	}
 	if item.DiscountValue.Valid {
@@ -1601,7 +1600,7 @@ func dbOrderItemToResponse(item database.OrderItem, mods []database.OrderItemMod
 		resp.Notes = &item.Notes.String
 	}
 	if item.Station.Valid {
-		s := string(item.Station.KitchenStation)
+		s := string(item.Station.String)
 		resp.Station = &s
 	}
 
@@ -1644,13 +1643,13 @@ func dbPaymentToResponse(p database.Payment) paymentResponse {
 }
 
 // isValidOrderStatus checks if the given status is a valid order status.
-func isValidOrderStatus(s database.OrderStatus) bool {
+func isValidOrderStatus(s string) bool {
 	switch s {
-	case database.OrderStatusNEW,
-		database.OrderStatusPREPARING,
-		database.OrderStatusREADY,
-		database.OrderStatusCOMPLETED,
-		database.OrderStatusCANCELLED:
+	case enum.OrderStatusNew,
+		enum.OrderStatusPreparing,
+		enum.OrderStatusReady,
+		enum.OrderStatusCompleted,
+		enum.OrderStatusCancelled:
 		return true
 	}
 	return false
@@ -1658,14 +1657,14 @@ func isValidOrderStatus(s database.OrderStatus) bool {
 
 // allowedTransitions defines valid status transitions.
 // Key is current status, value is the set of statuses it can transition to.
-var allowedTransitions = map[database.OrderStatus][]database.OrderStatus{
-	database.OrderStatusNEW:       {database.OrderStatusPREPARING, database.OrderStatusCANCELLED},
-	database.OrderStatusPREPARING: {database.OrderStatusREADY, database.OrderStatusCANCELLED},
-	database.OrderStatusREADY:     {database.OrderStatusCOMPLETED, database.OrderStatusCANCELLED},
+var allowedTransitions = map[string][]string{
+	enum.OrderStatusNew:       {enum.OrderStatusPreparing, enum.OrderStatusCancelled},
+	enum.OrderStatusPreparing: {enum.OrderStatusReady, enum.OrderStatusCancelled},
+	enum.OrderStatusReady:     {enum.OrderStatusCompleted, enum.OrderStatusCancelled},
 }
 
 // validateStatusTransition checks if the transition from current to next is allowed.
-func validateStatusTransition(current, next database.OrderStatus) error {
+func validateStatusTransition(current, next string) error {
 	allowed, ok := allowedTransitions[current]
 	if !ok {
 		return fmt.Errorf("cannot transition from %s", current)
@@ -1679,25 +1678,25 @@ func validateStatusTransition(current, next database.OrderStatus) error {
 }
 
 // isValidItemStatus checks if the given status is a valid order item status.
-func isValidItemStatus(s database.OrderItemStatus) bool {
+func isValidItemStatus(s string) bool {
 	switch s {
-	case database.OrderItemStatusPENDING,
-		database.OrderItemStatusPREPARING,
-		database.OrderItemStatusREADY:
+	case enum.OrderItemStatusPending,
+		enum.OrderItemStatusPreparing,
+		enum.OrderItemStatusReady:
 		return true
 	}
 	return false
 }
 
 // allowedItemTransitions defines valid item status transitions.
-var allowedItemTransitions = map[database.OrderItemStatus][]database.OrderItemStatus{
-	database.OrderItemStatusPENDING:   {database.OrderItemStatusPREPARING},
-	database.OrderItemStatusPREPARING: {database.OrderItemStatusREADY},
+var allowedItemTransitions = map[string][]string{
+	enum.OrderItemStatusPending:   {enum.OrderItemStatusPreparing},
+	enum.OrderItemStatusPreparing: {enum.OrderItemStatusReady},
 	// READY is terminal state for items
 }
 
 // validateItemStatusTransition checks if the transition from current to next is allowed.
-func validateItemStatusTransition(current, next database.OrderItemStatus) error {
+func validateItemStatusTransition(current, next string) error {
 	allowed, ok := allowedItemTransitions[current]
 	if !ok {
 		return fmt.Errorf("cannot transition from %s", current)

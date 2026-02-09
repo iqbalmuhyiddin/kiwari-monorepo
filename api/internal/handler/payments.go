@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/kiwari-pos/api/internal/database"
+	"github.com/kiwari-pos/api/internal/enum"
 	"github.com/kiwari-pos/api/internal/middleware"
 	"github.com/kiwari-pos/api/internal/service"
 	"github.com/shopspring/decimal"
@@ -92,7 +93,7 @@ func (h *PaymentHandler) Add(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "payment_method is required"})
 		return
 	}
-	paymentMethod := database.PaymentMethod(req.PaymentMethod)
+	paymentMethod := req.PaymentMethod
 	if !isValidPaymentMethod(paymentMethod) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid payment_method"})
 		return
@@ -112,7 +113,7 @@ func (h *PaymentHandler) Add(w http.ResponseWriter, r *http.Request) {
 	// For CASH payments, validate amount_received
 	var amountReceived pgtype.Numeric
 	var changeAmount pgtype.Numeric
-	if paymentMethod == database.PaymentMethodCASH {
+	if paymentMethod == enum.PaymentMethodCash {
 		if req.AmountReceived == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "amount_received is required for CASH payments"})
 			return
@@ -165,13 +166,13 @@ func (h *PaymentHandler) Add(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Cannot add payment to CANCELLED orders
-	if order.Status == database.OrderStatusCANCELLED {
+	if order.Status == enum.OrderStatusCancelled {
 		writeJSON(w, http.StatusConflict, map[string]string{"error": "cannot add payment to cancelled order"})
 		return
 	}
 
 	// Cannot add payment to COMPLETED orders
-	if order.Status == database.OrderStatusCOMPLETED {
+	if order.Status == enum.OrderStatusCompleted {
 		writeJSON(w, http.StatusConflict, map[string]string{"error": "cannot add payment to completed order"})
 		return
 	}
@@ -204,7 +205,7 @@ func (h *PaymentHandler) Add(w http.ResponseWriter, r *http.Request) {
 		OrderID:         orderID,
 		PaymentMethod:   paymentMethod,
 		Amount:          decimalToNumeric(amount),
-		Status:          database.PaymentStatusCOMPLETED,
+		Status:          enum.PaymentStatusCompleted,
 		ReferenceNumber: referenceNumber,
 		AmountReceived:  amountReceived,
 		ChangeAmount:    changeAmount,
@@ -220,16 +221,16 @@ func (h *PaymentHandler) Add(w http.ResponseWriter, r *http.Request) {
 	updatedOrder := order
 
 	// Handle catering lifecycle
-	if order.OrderType == database.OrderTypeCATERING {
+	if order.OrderType == enum.OrderTypeCatering {
 		// First payment for catering: BOOKED -> DP_PAID
-		if order.CateringStatus.Valid && order.CateringStatus.CateringStatus == database.CateringStatusBOOKED {
+		if order.CateringStatus.Valid && order.CateringStatus.String == enum.CateringStatusBooked {
 			// Check if this is the first payment
 			if totalPaidDecimal.Equal(decimal.Zero) {
 				updatedOrder, err = txStore.UpdateCateringStatus(r.Context(), database.UpdateCateringStatusParams{
 					ID: orderID,
-					CateringStatus: database.NullCateringStatus{
-						CateringStatus: database.CateringStatusDPPAID,
-						Valid:          true,
+					CateringStatus: pgtype.Text{
+						String: enum.CateringStatusDPPaid,
+						Valid:  true,
 					},
 				})
 				if err != nil {
@@ -244,9 +245,9 @@ func (h *PaymentHandler) Add(w http.ResponseWriter, r *http.Request) {
 		if newTotalPaid.GreaterThanOrEqual(orderTotal) {
 			updatedOrder, err = txStore.UpdateCateringStatus(r.Context(), database.UpdateCateringStatusParams{
 				ID: orderID,
-				CateringStatus: database.NullCateringStatus{
-					CateringStatus: database.CateringStatusSETTLED,
-					Valid:          true,
+				CateringStatus: pgtype.Text{
+					String: enum.CateringStatusSettled,
+					Valid:  true,
 				},
 			})
 			if err != nil {
@@ -259,9 +260,9 @@ func (h *PaymentHandler) Add(w http.ResponseWriter, r *http.Request) {
 
 	// Auto-complete order if fully paid (only if status is NEW, PREPARING, or READY)
 	if newTotalPaid.GreaterThanOrEqual(orderTotal) {
-		if order.Status == database.OrderStatusNEW ||
-			order.Status == database.OrderStatusPREPARING ||
-			order.Status == database.OrderStatusREADY {
+		if order.Status == enum.OrderStatusNew ||
+			order.Status == enum.OrderStatusPreparing ||
+			order.Status == enum.OrderStatusReady {
 			updatedOrder, err = txStore.CompleteOrder(r.Context(), orderID)
 			if err != nil {
 				// If CompleteOrder returns no rows, it means the order was already CANCELLED
@@ -343,11 +344,11 @@ func (h *PaymentHandler) List(w http.ResponseWriter, r *http.Request) {
 // --- Helpers ---
 
 // isValidPaymentMethod checks if the given payment method is valid.
-func isValidPaymentMethod(pm database.PaymentMethod) bool {
+func isValidPaymentMethod(pm string) bool {
 	switch pm {
-	case database.PaymentMethodCASH,
-		database.PaymentMethodQRIS,
-		database.PaymentMethodTRANSFER:
+	case enum.PaymentMethodCash,
+		enum.PaymentMethodQRIS,
+		enum.PaymentMethodTransfer:
 		return true
 	}
 	return false

@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/kiwari-pos/api/internal/database"
+	"github.com/kiwari-pos/api/internal/enum"
 	"github.com/shopspring/decimal"
 )
 
@@ -118,8 +119,7 @@ func toProductResponse(p database.Product) productResponse {
 		resp.ImageURL = &p.ImageUrl.String
 	}
 	if p.Station.Valid {
-		s := string(p.Station.KitchenStation)
-		resp.Station = &s
+		resp.Station = &p.Station.String
 	}
 	if p.PreparationTime.Valid {
 		pt := p.PreparationTime.Int32
@@ -131,9 +131,9 @@ func toProductResponse(p database.Product) productResponse {
 // --- Helpers ---
 
 func isValidStation(station string) bool {
-	switch database.KitchenStation(station) {
-	case database.KitchenStationGRILL, database.KitchenStationBEVERAGE,
-		database.KitchenStationRICE, database.KitchenStationDESSERT:
+	switch station {
+	case enum.StationGrill, enum.StationBeverage,
+		enum.StationRice, enum.StationDessert:
 		return true
 	}
 	return false
@@ -280,9 +280,9 @@ func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 		imageURL = pgtype.Text{String: req.ImageURL, Valid: true}
 	}
 
-	station := database.NullKitchenStation{}
+	station := pgtype.Text{}
 	if req.Station != "" {
-		station = database.NullKitchenStation{KitchenStation: database.KitchenStation(req.Station), Valid: true}
+		station = pgtype.Text{String: req.Station, Valid: true}
 	}
 
 	prepTime := pgtype.Int4{}
@@ -383,9 +383,9 @@ func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 		imageURL = pgtype.Text{String: req.ImageURL, Valid: true}
 	}
 
-	station := database.NullKitchenStation{}
+	station := pgtype.Text{}
 	if req.Station != "" {
-		station = database.NullKitchenStation{KitchenStation: database.KitchenStation(req.Station), Valid: true}
+		station = pgtype.Text{String: req.Station, Valid: true}
 	}
 
 	prepTime := pgtype.Int4{}

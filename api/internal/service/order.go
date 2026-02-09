@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/kiwari-pos/api/internal/database"
+	"github.com/kiwari-pos/api/internal/enum"
 	"github.com/shopspring/decimal"
 )
 
@@ -145,7 +146,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, req CreateOrderRequest) 
 	}
 
 	// --- Validate catering requirements ---
-	if orderType == database.OrderTypeCATERING {
+	if orderType == enum.OrderTypeCatering {
 		if req.CateringDate == "" {
 			return nil, ErrCateringDate
 		}
@@ -188,7 +189,7 @@ func isOrderNumberConflict(err error) bool {
 }
 
 // createOrderTx executes the full order creation in a single transaction.
-func (s *OrderService) createOrderTx(ctx context.Context, req CreateOrderRequest, orderType database.OrderType) (*CreateOrderResult, error) {
+func (s *OrderService) createOrderTx(ctx context.Context, req CreateOrderRequest, orderType string) (*CreateOrderResult, error) {
 	// --- Begin transaction ---
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -291,7 +292,7 @@ func (s *OrderService) createOrderTx(ctx context.Context, req CreateOrderRequest
 		}
 
 		// Calculate item discount
-		itemDiscountType := database.NullDiscountType{}
+		itemDiscountType := pgtype.Text{}
 		itemDiscountValue := pgtype.Numeric{}
 		itemDiscountAmount := decimal.Zero
 		if item.DiscountType != "" {
@@ -302,9 +303,9 @@ func (s *OrderService) createOrderTx(ctx context.Context, req CreateOrderRequest
 			if err != nil {
 				return nil, fmt.Errorf("item[%d]: %w", i, ErrInvalidDiscountValue)
 			}
-			itemDiscountType = database.NullDiscountType{
-				DiscountType: database.DiscountType(item.DiscountType),
-				Valid:        true,
+			itemDiscountType = pgtype.Text{
+				String: item.DiscountType,
+				Valid:  true,
 			}
 			itemDiscountValue = decimalToNumeric(dv)
 
@@ -350,7 +351,7 @@ func (s *OrderService) createOrderTx(ctx context.Context, req CreateOrderRequest
 	}
 
 	// --- Calculate order-level discount ---
-	orderDiscountType := database.NullDiscountType{}
+	orderDiscountType := pgtype.Text{}
 	orderDiscountValue := pgtype.Numeric{}
 	orderDiscountAmount := decimal.Zero
 	if req.DiscountType != "" {
@@ -358,9 +359,9 @@ func (s *OrderService) createOrderTx(ctx context.Context, req CreateOrderRequest
 		if err != nil {
 			return nil, ErrInvalidDiscountValue
 		}
-		orderDiscountType = database.NullDiscountType{
-			DiscountType: database.DiscountType(req.DiscountType),
-			Valid:        true,
+		orderDiscountType = pgtype.Text{
+			String: req.DiscountType,
+			Valid:  true,
 		}
 		orderDiscountValue = decimalToNumeric(dv)
 
@@ -399,17 +400,17 @@ func (s *OrderService) createOrderTx(ctx context.Context, req CreateOrderRequest
 	}
 
 	cateringDate := pgtype.Timestamptz{}
-	cateringStatus := database.NullCateringStatus{}
+	cateringStatus := pgtype.Text{}
 	cateringDpAmount := pgtype.Numeric{}
-	if orderType == database.OrderTypeCATERING {
+	if orderType == enum.OrderTypeCatering {
 		t, err := time.Parse(time.RFC3339, req.CateringDate)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %w", ErrInvalidCateringDate, err)
 		}
 		cateringDate = pgtype.Timestamptz{Time: t, Valid: true}
-		cateringStatus = database.NullCateringStatus{
-			CateringStatus: database.CateringStatusBOOKED,
-			Valid:          true,
+		cateringStatus = pgtype.Text{
+			String: enum.CateringStatusBooked,
+			Valid:  true,
 		}
 		if req.CateringDpAmount != "" {
 			dpAmount, err := decimal.NewFromString(req.CateringDpAmount)
@@ -422,7 +423,7 @@ func (s *OrderService) createOrderTx(ctx context.Context, req CreateOrderRequest
 
 	deliveryPlatform := pgtype.Text{}
 	deliveryAddress := pgtype.Text{}
-	if orderType == database.OrderTypeDELIVERY {
+	if orderType == enum.OrderTypeDelivery {
 		if req.DeliveryPlatform != "" {
 			deliveryPlatform = pgtype.Text{String: req.DeliveryPlatform, Valid: true}
 		}
@@ -498,18 +499,18 @@ func (s *OrderService) createOrderTx(ctx context.Context, req CreateOrderRequest
 
 // --- Helpers ---
 
-func validateOrderType(s string) (database.OrderType, error) {
-	switch database.OrderType(s) {
-	case database.OrderTypeDINEIN, database.OrderTypeTAKEAWAY,
-		database.OrderTypeDELIVERY, database.OrderTypeCATERING:
-		return database.OrderType(s), nil
+func validateOrderType(s string) (string, error) {
+	switch s {
+	case enum.OrderTypeDineIn, enum.OrderTypeTakeaway,
+		enum.OrderTypeDelivery, enum.OrderTypeCatering:
+		return s, nil
 	}
 	return "", ErrInvalidOrderType
 }
 
 func isValidDiscountType(s string) bool {
-	switch database.DiscountType(s) {
-	case database.DiscountTypePERCENTAGE, database.DiscountTypeFIXEDAMOUNT:
+	switch s {
+	case enum.DiscountTypePercentage, enum.DiscountTypeFixed:
 		return true
 	}
 	return false
