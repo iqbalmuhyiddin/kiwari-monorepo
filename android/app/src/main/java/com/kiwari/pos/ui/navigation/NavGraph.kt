@@ -33,6 +33,7 @@ import com.kiwari.pos.ui.settings.PrinterSettingsScreen
 import com.kiwari.pos.ui.staff.StaffFormScreen
 import com.kiwari.pos.ui.staff.StaffListScreen
 import com.kiwari.pos.util.DrawerFeature
+import androidx.navigation.compose.currentBackStackEntryAsState
 import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String) {
@@ -108,6 +109,9 @@ fun NavGraph(
         }
     }
 
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         gesturesEnabled = drawerState.isOpen,
@@ -116,6 +120,7 @@ fun NavGraph(
                 userName = userName,
                 userRole = userRole,
                 outletName = "",
+                currentRoute = currentRoute,
                 onItemClick = { feature ->
                     scope.launch { drawerState.close() }
                     when (feature) {

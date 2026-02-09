@@ -38,11 +38,24 @@ private val allItems = listOf(
     DrawerItem(DrawerFeature.PRINTER, "Printer", "\uD83D\uDDA8\uFE0F")
 )
 
+private fun featureMatchesRoute(feature: DrawerFeature, route: String?): Boolean {
+    if (route == null) return false
+    return when (feature) {
+        DrawerFeature.PESANAN -> route.startsWith("order")
+        DrawerFeature.LAPORAN -> route.startsWith("reports")
+        DrawerFeature.MENU_ADMIN -> route.startsWith("menu-admin")
+        DrawerFeature.PELANGGAN -> route.startsWith("customer")
+        DrawerFeature.PENGGUNA -> route.startsWith("staff")
+        DrawerFeature.PRINTER -> route.startsWith("settings")
+    }
+}
+
 @Composable
 fun AppDrawerContent(
     userName: String,
     userRole: UserRole,
     outletName: String,
+    currentRoute: String? = null,
     onItemClick: (DrawerFeature) -> Unit,
     onLogout: () -> Unit
 ) {
@@ -79,11 +92,12 @@ fun AppDrawerContent(
             // Navigation items filtered by role
             val visibleItems = allItems.filter { isFeatureVisible(it.feature, userRole) }
             visibleItems.forEach { item ->
+                val isActive = featureMatchesRoute(item.feature, currentRoute)
                 NavigationDrawerItem(
                     label = {
                         Text(text = "${item.icon}  ${item.label}")
                     },
-                    selected = false,
+                    selected = isActive,
                     onClick = { onItemClick(item.feature) },
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
