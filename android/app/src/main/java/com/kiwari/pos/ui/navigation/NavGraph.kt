@@ -30,6 +30,8 @@ import com.kiwari.pos.ui.payment.PaymentScreen
 import com.kiwari.pos.ui.customers.CustomerDetailScreen
 import com.kiwari.pos.ui.customers.CustomerListScreen
 import com.kiwari.pos.ui.menuadmin.CategoryListScreen
+import com.kiwari.pos.ui.menuadmin.ProductDetailScreen
+import com.kiwari.pos.ui.menuadmin.ProductListScreen
 import com.kiwari.pos.ui.reports.ReportsScreen
 import com.kiwari.pos.ui.settings.PrinterSettingsScreen
 import com.kiwari.pos.util.DrawerFeature
@@ -62,6 +64,16 @@ sealed class Screen(val route: String) {
     object CustomerList : Screen("customers")
     object CustomerDetail : Screen("customer/{customerId}") {
         fun createRoute(customerId: String) = "customer/$customerId"
+    }
+    object ProductList : Screen("menu-admin/{categoryId}/{categoryName}") {
+        fun createRoute(categoryId: String, categoryName: String) =
+            "menu-admin/$categoryId/${android.net.Uri.encode(categoryName)}"
+    }
+    object ProductDetail : Screen("menu-admin/product/{productId}?categoryId={categoryId}") {
+        fun createRoute(productId: String, categoryId: String? = null): String {
+            return if (categoryId != null) "menu-admin/product/$productId?categoryId=$categoryId"
+            else "menu-admin/product/$productId"
+        }
     }
     object StaffList : Screen("staff")
 }
@@ -272,9 +284,56 @@ fun NavGraph(
             composable(Screen.MenuAdmin.route) {
                 CategoryListScreen(
                     onCategoryClick = { categoryId, categoryName ->
-                        // ProductList will be wired in Task 9
+                        navController.navigate(Screen.ProductList.createRoute(categoryId, categoryName)) {
+                            launchSingleTop = true
+                        }
                     },
                     onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Screen.ProductList.route,
+                arguments = listOf(
+                    navArgument("categoryId") { type = NavType.StringType },
+                    navArgument("categoryName") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val categoryId = backStackEntry.arguments?.getString("categoryId") ?: ""
+                ProductListScreen(
+                    onProductClick = { productId ->
+                        navController.navigate(Screen.ProductDetail.createRoute(productId)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onCreateProduct = {
+                        navController.navigate(Screen.ProductDetail.createRoute("new", categoryId)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Screen.ProductDetail.route,
+                arguments = listOf(
+                    navArgument("productId") { type = NavType.StringType },
+                    navArgument("categoryId") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) {
+                ProductDetailScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onProductCreated = { productId ->
+                        navController.navigate(Screen.ProductDetail.createRoute(productId)) {
+                            popUpTo(Screen.ProductList.route)
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
 
