@@ -27,6 +27,8 @@ import com.kiwari.pos.ui.menu.MenuScreen
 import com.kiwari.pos.ui.orders.OrderDetailScreen
 import com.kiwari.pos.ui.orders.OrderListScreen
 import com.kiwari.pos.ui.payment.PaymentScreen
+import com.kiwari.pos.ui.customers.CustomerDetailScreen
+import com.kiwari.pos.ui.customers.CustomerListScreen
 import com.kiwari.pos.ui.reports.ReportsScreen
 import com.kiwari.pos.ui.settings.PrinterSettingsScreen
 import com.kiwari.pos.util.DrawerFeature
@@ -57,6 +59,9 @@ sealed class Screen(val route: String) {
     object Reports : Screen("reports")
     object MenuAdmin : Screen("menu-admin")
     object CustomerList : Screen("customers")
+    object CustomerDetail : Screen("customer/{customerId}") {
+        fun createRoute(customerId: String) = "customer/$customerId"
+    }
     object StaffList : Screen("staff")
 }
 
@@ -271,12 +276,28 @@ fun NavGraph(
             }
 
             composable(Screen.CustomerList.route) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Coming soon")
-                }
+                CustomerListScreen(
+                    onCustomerClick = { customerId ->
+                        navController.navigate(Screen.CustomerDetail.createRoute(customerId)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Screen.CustomerDetail.route,
+                arguments = listOf(navArgument("customerId") { type = NavType.StringType })
+            ) {
+                CustomerDetailScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onOrderClick = { orderId ->
+                        navController.navigate(Screen.OrderDetail.createRoute(orderId)) {
+                            launchSingleTop = true
+                        }
+                    }
+                )
             }
 
             composable(Screen.StaffList.route) {
