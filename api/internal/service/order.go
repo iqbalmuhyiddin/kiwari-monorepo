@@ -309,7 +309,7 @@ func (s *OrderService) createOrderTx(ctx context.Context, req CreateOrderRequest
 			}
 			itemDiscountValue = decimalToNumeric(dv)
 
-			if item.DiscountType == "PERCENTAGE" {
+			if item.DiscountType == enum.DiscountTypePercentage {
 				// Percentage discount applies to (unit_price * qty) + modifiers_total.
 				// This means modifiers are also discounted — intentional business decision.
 				lineTotal := unitPrice.Mul(decimal.NewFromInt32(item.Quantity)).Add(modifiersTotal)
@@ -365,7 +365,7 @@ func (s *OrderService) createOrderTx(ctx context.Context, req CreateOrderRequest
 		}
 		orderDiscountValue = decimalToNumeric(dv)
 
-		if req.DiscountType == "PERCENTAGE" {
+		if req.DiscountType == enum.DiscountTypePercentage {
 			orderDiscountAmount = orderSubtotal.Mul(dv).Div(decimal.NewFromInt(100))
 		} else {
 			orderDiscountAmount = dv

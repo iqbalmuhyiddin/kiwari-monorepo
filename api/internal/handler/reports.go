@@ -208,7 +208,7 @@ func (h *ReportsHandler) PaymentSummary(w http.ResponseWriter, r *http.Request) 
 	resp := make([]paymentSummaryResponse, len(rows))
 	for i, row := range rows {
 		resp[i] = paymentSummaryResponse{
-			PaymentMethod:    string(row.PaymentMethod),
+			PaymentMethod:    row.PaymentMethod,
 			TransactionCount: row.TransactionCount,
 			TotalAmount:      numericToString(row.TotalAmount),
 		}

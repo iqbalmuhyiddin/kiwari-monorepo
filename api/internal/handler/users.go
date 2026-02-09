@@ -82,7 +82,7 @@ func toUserDetailResponse(u database.User) userDetailResponse {
 		OutletID:  u.OutletID,
 		Email:     u.Email,
 		FullName:  u.FullName,
-		Role:      string(u.Role),
+		Role:      u.Role,
 		IsActive:  u.IsActive,
 		CreatedAt: u.CreatedAt,
 		UpdatedAt: u.UpdatedAt,

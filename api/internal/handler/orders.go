@@ -1399,8 +1399,8 @@ func toOrderResponse(result *service.CreateOrderResult) orderResponse {
 		ID:             o.ID,
 		OutletID:       o.OutletID,
 		OrderNumber:    o.OrderNumber,
-		OrderType:      string(o.OrderType),
-		Status:         string(o.Status),
+		OrderType:      o.OrderType,
+		Status:         o.Status,
 		Subtotal:       numericToString(o.Subtotal),
 		DiscountAmount: numericToString(o.DiscountAmount),
 		TaxAmount:      numericToString(o.TaxAmount),
@@ -1432,7 +1432,7 @@ func toOrderResponse(result *service.CreateOrderResult) orderResponse {
 		resp.CateringDate = &o.CateringDate.Time
 	}
 	if o.CateringStatus.Valid {
-		s := string(o.CateringStatus.String)
+		s := o.CateringStatus.String
 		resp.CateringStatus = &s
 	}
 	if o.CateringDpAmount.Valid {
@@ -1463,7 +1463,7 @@ func toOrderItemResponse(ir service.OrderItemResult) orderItemResponse {
 		UnitPrice:      numericToString(item.UnitPrice),
 		DiscountAmount: numericToString(item.DiscountAmount),
 		Subtotal:       numericToString(item.Subtotal),
-		Status:         string(item.Status),
+		Status:         item.Status,
 	}
 
 	if item.VariantID.Valid {
@@ -1482,7 +1482,7 @@ func toOrderItemResponse(ir service.OrderItemResult) orderItemResponse {
 		resp.Notes = &item.Notes.String
 	}
 	if item.Station.Valid {
-		s := string(item.Station.String)
+		s := item.Station.String
 		resp.Station = &s
 	}
 
@@ -1522,8 +1522,8 @@ func dbOrderToResponse(o database.Order) orderResponse {
 		ID:             o.ID,
 		OutletID:       o.OutletID,
 		OrderNumber:    o.OrderNumber,
-		OrderType:      string(o.OrderType),
-		Status:         string(o.Status),
+		OrderType:      o.OrderType,
+		Status:         o.Status,
 		Subtotal:       numericToString(o.Subtotal),
 		DiscountAmount: numericToString(o.DiscountAmount),
 		TaxAmount:      numericToString(o.TaxAmount),
@@ -1555,7 +1555,7 @@ func dbOrderToResponse(o database.Order) orderResponse {
 		resp.CateringDate = &o.CateringDate.Time
 	}
 	if o.CateringStatus.Valid {
-		s := string(o.CateringStatus.String)
+		s := o.CateringStatus.String
 		resp.CateringStatus = &s
 	}
 	if o.CateringDpAmount.Valid {
@@ -1581,7 +1581,7 @@ func dbOrderItemToResponse(item database.OrderItem, mods []database.OrderItemMod
 		UnitPrice:      numericToString(item.UnitPrice),
 		DiscountAmount: numericToString(item.DiscountAmount),
 		Subtotal:       numericToString(item.Subtotal),
-		Status:         string(item.Status),
+		Status:         item.Status,
 	}
 
 	if item.VariantID.Valid {
@@ -1600,7 +1600,7 @@ func dbOrderItemToResponse(item database.OrderItem, mods []database.OrderItemMod
 		resp.Notes = &item.Notes.String
 	}
 	if item.Station.Valid {
-		s := string(item.Station.String)
+		s := item.Station.String
 		resp.Station = &s
 	}
 
@@ -1622,9 +1622,9 @@ func dbPaymentToResponse(p database.Payment) paymentResponse {
 	resp := paymentResponse{
 		ID:            p.ID,
 		OrderID:       p.OrderID,
-		PaymentMethod: string(p.PaymentMethod),
+		PaymentMethod: p.PaymentMethod,
 		Amount:        numericToString(p.Amount),
-		Status:        string(p.Status),
+		Status:        p.Status,
 		ProcessedBy:   p.ProcessedBy,
 		ProcessedAt:   p.ProcessedAt,
 	}

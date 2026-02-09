@@ -412,7 +412,7 @@ func TestLogin_ReturnsValidAccessToken(t *testing.T) {
 	if claims.OutletID != user.OutletID {
 		t.Errorf("claims outlet ID: got %v, want %v", claims.OutletID, user.OutletID)
 	}
-	if claims.Role != string(user.Role) {
+	if claims.Role != user.Role {
 		t.Errorf("claims role: got %v, want %v", claims.Role, user.Role)
 	}
 }

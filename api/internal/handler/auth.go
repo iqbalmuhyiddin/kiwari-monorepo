@@ -198,7 +198,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 // --- Helpers ---
 
 func (h *AuthHandler) respondWithTokens(w http.ResponseWriter, user database.User) {
-	accessToken, err := auth.GenerateToken(h.jwtSecret, user.ID, user.OutletID, string(user.Role))
+	accessToken, err := auth.GenerateToken(h.jwtSecret, user.ID, user.OutletID, user.Role)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
 		return
@@ -218,7 +218,7 @@ func (h *AuthHandler) respondWithTokens(w http.ResponseWriter, user database.Use
 			OutletID: user.OutletID,
 			FullName: user.FullName,
 			Email:    user.Email,
-			Role:     string(user.Role),
+			Role:     user.Role,
 		},
 	})
 }
