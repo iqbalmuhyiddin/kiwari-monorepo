@@ -29,6 +29,7 @@ import com.kiwari.pos.ui.orders.OrderListScreen
 import com.kiwari.pos.ui.payment.PaymentScreen
 import com.kiwari.pos.ui.customers.CustomerDetailScreen
 import com.kiwari.pos.ui.customers.CustomerListScreen
+import com.kiwari.pos.ui.menuadmin.CategoryListScreen
 import com.kiwari.pos.ui.reports.ReportsScreen
 import com.kiwari.pos.ui.settings.PrinterSettingsScreen
 import com.kiwari.pos.util.DrawerFeature
@@ -269,12 +270,12 @@ fun NavGraph(
             }
 
             composable(Screen.MenuAdmin.route) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Coming soon")
-                }
+                CategoryListScreen(
+                    onCategoryClick = { categoryId, categoryName ->
+                        // ProductList will be wired in Task 9
+                    },
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
 
             composable(Screen.CustomerList.route) {
