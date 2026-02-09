@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/kiwari-pos/api/internal/database"
+	"github.com/kiwari-pos/api/internal/enum"
 	"github.com/kiwari-pos/api/internal/handler"
 )
 
@@ -236,7 +237,7 @@ func TestProductGet_Valid(t *testing.T) {
 		ID: prodID, OutletID: outletID, CategoryID: catID, Name: "Nasi Bakar Original",
 		Description: pgtype.Text{String: "Signature dish", Valid: true},
 		BasePrice:   testNumeric("25000"),
-		Station:     database.NullKitchenStation{KitchenStation: database.KitchenStationGRILL, Valid: true},
+		Station:     pgtype.Text{String: enum.StationGrill, Valid: true},
 		PreparationTime: pgtype.Int4{Int32: 15, Valid: true},
 		IsCombo: false, IsActive: true, CreatedAt: now, UpdatedAt: now,
 	}

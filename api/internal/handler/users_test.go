@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/kiwari-pos/api/internal/database"
+	"github.com/kiwari-pos/api/internal/enum"
 	"github.com/kiwari-pos/api/internal/handler"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -159,11 +160,11 @@ func TestListUsers_ReturnsOutletUsers(t *testing.T) {
 
 	store.users[uuid.New()] = database.User{
 		ID: uuid.New(), OutletID: outletID, Email: "a@test.com",
-		FullName: "Alice", Role: database.UserRoleCASHIER, IsActive: true,
+		FullName: "Alice", Role: enum.UserRoleCashier, IsActive: true,
 	}
 	store.users[uuid.New()] = database.User{
 		ID: uuid.New(), OutletID: otherOutletID, Email: "b@test.com",
-		FullName: "Bob", Role: database.UserRoleMANAGER, IsActive: true,
+		FullName: "Bob", Role: enum.UserRoleManager, IsActive: true,
 	}
 
 	router := setupUserRouter(store)
@@ -189,7 +190,7 @@ func TestListUsers_ExcludesHashedPassword(t *testing.T) {
 	store.users[uuid.New()] = database.User{
 		ID: uuid.New(), OutletID: outletID, Email: "a@test.com",
 		HashedPassword: "$2a$10$somehash", FullName: "Alice",
-		Role: database.UserRoleCASHIER, IsActive: true,
+		Role: enum.UserRoleCashier, IsActive: true,
 	}
 
 	router := setupUserRouter(store)
@@ -374,7 +375,7 @@ func TestUpdateUser_Valid(t *testing.T) {
 		OutletID: outletID,
 		Email:    "old@test.com",
 		FullName: "Old Name",
-		Role:     database.UserRoleCASHIER,
+		Role:     enum.UserRoleCashier,
 		IsActive: true,
 	}
 
@@ -431,7 +432,7 @@ func TestUpdateUser_WrongOutlet(t *testing.T) {
 		OutletID: outletID,
 		Email:    "old@test.com",
 		FullName: "Old Name",
-		Role:     database.UserRoleCASHIER,
+		Role:     enum.UserRoleCashier,
 		IsActive: true,
 	}
 
@@ -459,7 +460,7 @@ func TestUpdateUser_ExcludesHashedPassword(t *testing.T) {
 		Email:          "old@test.com",
 		HashedPassword: "$2a$10$somehash",
 		FullName:       "Old Name",
-		Role:           database.UserRoleCASHIER,
+		Role:           enum.UserRoleCashier,
 		IsActive:       true,
 	}
 
@@ -541,7 +542,7 @@ func TestDeleteUser_Valid(t *testing.T) {
 		OutletID: outletID,
 		Email:    "delete@test.com",
 		FullName: "Delete Me",
-		Role:     database.UserRoleCASHIER,
+		Role:     enum.UserRoleCashier,
 		IsActive: true,
 	}
 
@@ -570,7 +571,7 @@ func TestDeleteUser_SoftDeleteDoesNotRemove(t *testing.T) {
 		OutletID: outletID,
 		Email:    "softdel@test.com",
 		FullName: "Soft Delete",
-		Role:     database.UserRoleCASHIER,
+		Role:     enum.UserRoleCashier,
 		IsActive: true,
 	}
 
@@ -659,7 +660,7 @@ func TestCreateUser_DuplicateEmail(t *testing.T) {
 	// Pre-populate a user with this email.
 	store.users[uuid.New()] = database.User{
 		ID: uuid.New(), OutletID: outletID, Email: "taken@test.com",
-		FullName: "Existing", Role: database.UserRoleCASHIER, IsActive: true,
+		FullName: "Existing", Role: enum.UserRoleCashier, IsActive: true,
 	}
 
 	router := setupUserRouter(store)
@@ -689,11 +690,11 @@ func TestUpdateUser_DuplicateEmail(t *testing.T) {
 
 	store.users[otherUserID] = database.User{
 		ID: otherUserID, OutletID: outletID, Email: "taken@test.com",
-		FullName: "Other", Role: database.UserRoleCASHIER, IsActive: true,
+		FullName: "Other", Role: enum.UserRoleCashier, IsActive: true,
 	}
 	store.users[userID] = database.User{
 		ID: userID, OutletID: outletID, Email: "me@test.com",
-		FullName: "Me", Role: database.UserRoleCASHIER, IsActive: true,
+		FullName: "Me", Role: enum.UserRoleCashier, IsActive: true,
 	}
 
 	router := setupUserRouter(store)
@@ -755,7 +756,7 @@ func TestUpdateUser_InvalidEmail(t *testing.T) {
 
 	store.users[userID] = database.User{
 		ID: userID, OutletID: outletID, Email: "old@test.com",
-		FullName: "Old", Role: database.UserRoleCASHIER, IsActive: true,
+		FullName: "Old", Role: enum.UserRoleCashier, IsActive: true,
 	}
 
 	router := setupUserRouter(store)
@@ -849,7 +850,7 @@ func TestUpdateUser_PinValidation(t *testing.T) {
 
 	store.users[userID] = database.User{
 		ID: userID, OutletID: outletID, Email: "pin@test.com",
-		FullName: "Pin Test", Role: database.UserRoleCASHIER, IsActive: true,
+		FullName: "Pin Test", Role: enum.UserRoleCashier, IsActive: true,
 	}
 
 	router := setupUserRouter(store)

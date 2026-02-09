@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/kiwari-pos/api/internal/auth"
 	"github.com/kiwari-pos/api/internal/database"
+	"github.com/kiwari-pos/api/internal/enum"
 	"github.com/kiwari-pos/api/internal/handler"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -89,7 +90,7 @@ func makeTestUser(t *testing.T) database.User {
 		Email:          "cashier@test.com",
 		HashedPassword: hashPassword(t, "correct-password"),
 		FullName:       "Test Cashier",
-		Role:           database.UserRoleCASHIER,
+		Role:           enum.UserRoleCashier,
 		Pin:            pgtype.Text{String: "1234", Valid: true},
 		IsActive:       true,
 	}

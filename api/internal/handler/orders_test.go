@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/kiwari-pos/api/internal/auth"
 	"github.com/kiwari-pos/api/internal/database"
+	"github.com/kiwari-pos/api/internal/enum"
 	"github.com/kiwari-pos/api/internal/handler"
 	"github.com/kiwari-pos/api/internal/middleware"
 	"github.com/kiwari-pos/api/internal/service"
@@ -35,25 +36,25 @@ func (m *mockOrderService) CreateOrder(ctx context.Context, req service.CreateOr
 // --- Mock OrderStore ---
 
 type mockOrderStore struct {
-	getOrderFn                  func(ctx context.Context, arg database.GetOrderParams) (database.Order, error)
-	listOrdersFn                func(ctx context.Context, arg database.ListOrdersParams) ([]database.Order, error)
-	listActiveOrdersFn          func(ctx context.Context, arg database.ListActiveOrdersParams) ([]database.ListActiveOrdersRow, error)
-	listOrderItemsByOrderFn     func(ctx context.Context, orderID uuid.UUID) ([]database.OrderItem, error)
-	listOrderItemModifiersFn    func(ctx context.Context, orderItemID uuid.UUID) ([]database.OrderItemModifier, error)
-	listPaymentsByOrderFn       func(ctx context.Context, orderID uuid.UUID) ([]database.Payment, error)
-	updateOrderStatusFn         func(ctx context.Context, arg database.UpdateOrderStatusParams) (database.Order, error)
-	cancelOrderFn               func(ctx context.Context, arg database.CancelOrderParams) (database.Order, error)
-	getOrderItemFn              func(ctx context.Context, arg database.GetOrderItemParams) (database.OrderItem, error)
-	updateOrderItemFn           func(ctx context.Context, arg database.UpdateOrderItemParams) (database.OrderItem, error)
-	deleteOrderItemFn           func(ctx context.Context, arg database.DeleteOrderItemParams) error
-	updateOrderItemStatusFn     func(ctx context.Context, arg database.UpdateOrderItemStatusParams) (database.OrderItem, error)
-	countOrderItemsFn           func(ctx context.Context, orderID uuid.UUID) (int64, error)
-	updateOrderTotalsFn         func(ctx context.Context, orderID uuid.UUID) (database.Order, error)
-	getProductForOrderFn        func(ctx context.Context, arg database.GetProductForOrderParams) (database.GetProductForOrderRow, error)
-	getVariantForOrderFn        func(ctx context.Context, variantID uuid.UUID) (database.GetVariantForOrderRow, error)
-	getModifierForOrderFn       func(ctx context.Context, modifierID uuid.UUID) (database.GetModifierForOrderRow, error)
-	createOrderItemFn           func(ctx context.Context, arg database.CreateOrderItemParams) (database.OrderItem, error)
-	createOrderItemModifierFn   func(ctx context.Context, arg database.CreateOrderItemModifierParams) (database.OrderItemModifier, error)
+	getOrderFn                func(ctx context.Context, arg database.GetOrderParams) (database.Order, error)
+	listOrdersFn              func(ctx context.Context, arg database.ListOrdersParams) ([]database.Order, error)
+	listActiveOrdersFn        func(ctx context.Context, arg database.ListActiveOrdersParams) ([]database.ListActiveOrdersRow, error)
+	listOrderItemsByOrderFn   func(ctx context.Context, orderID uuid.UUID) ([]database.OrderItem, error)
+	listOrderItemModifiersFn  func(ctx context.Context, orderItemID uuid.UUID) ([]database.OrderItemModifier, error)
+	listPaymentsByOrderFn     func(ctx context.Context, orderID uuid.UUID) ([]database.Payment, error)
+	updateOrderStatusFn       func(ctx context.Context, arg database.UpdateOrderStatusParams) (database.Order, error)
+	cancelOrderFn             func(ctx context.Context, arg database.CancelOrderParams) (database.Order, error)
+	getOrderItemFn            func(ctx context.Context, arg database.GetOrderItemParams) (database.OrderItem, error)
+	updateOrderItemFn         func(ctx context.Context, arg database.UpdateOrderItemParams) (database.OrderItem, error)
+	deleteOrderItemFn         func(ctx context.Context, arg database.DeleteOrderItemParams) error
+	updateOrderItemStatusFn   func(ctx context.Context, arg database.UpdateOrderItemStatusParams) (database.OrderItem, error)
+	countOrderItemsFn         func(ctx context.Context, orderID uuid.UUID) (int64, error)
+	updateOrderTotalsFn       func(ctx context.Context, orderID uuid.UUID) (database.Order, error)
+	getProductForOrderFn      func(ctx context.Context, arg database.GetProductForOrderParams) (database.GetProductForOrderRow, error)
+	getVariantForOrderFn      func(ctx context.Context, variantID uuid.UUID) (database.GetVariantForOrderRow, error)
+	getModifierForOrderFn     func(ctx context.Context, modifierID uuid.UUID) (database.GetModifierForOrderRow, error)
+	createOrderItemFn         func(ctx context.Context, arg database.CreateOrderItemParams) (database.OrderItem, error)
+	createOrderItemModifierFn func(ctx context.Context, arg database.CreateOrderItemModifierParams) (database.OrderItemModifier, error)
 }
 
 func (m *mockOrderStore) GetOrder(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
@@ -336,18 +337,18 @@ func testOrderResult(outletID, userID uuid.UUID) *service.CreateOrderResult {
 
 	return &service.CreateOrderResult{
 		Order: database.Order{
-			ID:          orderID,
-			OutletID:    outletID,
-			OrderNumber: "KWR-001",
-			OrderType:   database.OrderTypeDINEIN,
-			Status:      database.OrderStatusNEW,
-			Subtotal:    testNumeric("25000.00"),
+			ID:             orderID,
+			OutletID:       outletID,
+			OrderNumber:    "KWR-001",
+			OrderType:      enum.OrderTypeDineIn,
+			Status:         enum.OrderStatusNew,
+			Subtotal:       testNumeric("25000.00"),
 			DiscountAmount: testNumeric("0.00"),
-			TaxAmount:   testNumeric("0.00"),
-			TotalAmount: testNumeric("25000.00"),
-			CreatedBy:   userID,
-			CreatedAt:   now,
-			UpdatedAt:   now,
+			TaxAmount:      testNumeric("0.00"),
+			TotalAmount:    testNumeric("25000.00"),
+			CreatedBy:      userID,
+			CreatedAt:      now,
+			UpdatedAt:      now,
 		},
 		Items: []service.OrderItemResult{
 			{
@@ -359,8 +360,8 @@ func testOrderResult(outletID, userID uuid.UUID) *service.CreateOrderResult {
 					UnitPrice:      testNumeric("12500.00"),
 					DiscountAmount: testNumeric("0.00"),
 					Subtotal:       testNumeric("25000.00"),
-					Status:         database.OrderItemStatusPENDING,
-					Station:        database.NullKitchenStation{KitchenStation: database.KitchenStationGRILL, Valid: true},
+					Status:         enum.OrderItemStatusPending,
+					Station:        pgtype.Text{String: enum.StationGrill, Valid: true},
 				},
 				Modifiers: nil,
 			},
@@ -463,7 +464,7 @@ func TestOrderCreate_WithModifiers(t *testing.T) {
 			return &service.CreateOrderResult{
 				Order: database.Order{
 					ID: orderID, OutletID: outletID, OrderNumber: "KWR-001",
-					OrderType: database.OrderTypeDINEIN, Status: database.OrderStatusNEW,
+					OrderType: enum.OrderTypeDineIn, Status: enum.OrderStatusNew,
 					Subtotal: testNumeric("30000.00"), DiscountAmount: testNumeric("0.00"),
 					TaxAmount: testNumeric("0.00"), TotalAmount: testNumeric("30000.00"),
 					CreatedBy: claims.UserID, CreatedAt: now, UpdatedAt: now,
@@ -474,7 +475,7 @@ func TestOrderCreate_WithModifiers(t *testing.T) {
 							ID: itemID, OrderID: orderID, ProductID: uuid.New(),
 							Quantity: 1, UnitPrice: testNumeric("25000.00"),
 							DiscountAmount: testNumeric("0.00"), Subtotal: testNumeric("30000.00"),
-							Status: database.OrderItemStatusPENDING,
+							Status: enum.OrderItemStatusPending,
 						},
 						Modifiers: []database.OrderItemModifier{
 							{
@@ -774,14 +775,14 @@ func TestOrderCreate_WithDiscount(t *testing.T) {
 			return &service.CreateOrderResult{
 				Order: database.Order{
 					ID: orderID, OutletID: outletID, OrderNumber: "KWR-001",
-					OrderType: database.OrderTypeDINEIN, Status: database.OrderStatusNEW,
-					Subtotal: testNumeric("50000.00"),
-					DiscountType: database.NullDiscountType{DiscountType: database.DiscountTypePERCENTAGE, Valid: true},
-					DiscountValue: testNumeric("10.00"),
+					OrderType: enum.OrderTypeDineIn, Status: enum.OrderStatusNew,
+					Subtotal:       testNumeric("50000.00"),
+					DiscountType:   pgtype.Text{String: enum.DiscountTypePercentage, Valid: true},
+					DiscountValue:  testNumeric("10.00"),
 					DiscountAmount: testNumeric("5000.00"),
-					TaxAmount: testNumeric("0.00"),
-					TotalAmount: testNumeric("45000.00"),
-					CreatedBy: claims.UserID, CreatedAt: now, UpdatedAt: now,
+					TaxAmount:      testNumeric("0.00"),
+					TotalAmount:    testNumeric("45000.00"),
+					CreatedBy:      claims.UserID, CreatedAt: now, UpdatedAt: now,
 				},
 				Items: []service.OrderItemResult{
 					{
@@ -789,7 +790,7 @@ func TestOrderCreate_WithDiscount(t *testing.T) {
 							ID: uuid.New(), OrderID: orderID, ProductID: uuid.New(),
 							Quantity: 2, UnitPrice: testNumeric("25000.00"),
 							DiscountAmount: testNumeric("0.00"), Subtotal: testNumeric("50000.00"),
-							Status: database.OrderItemStatusPENDING,
+							Status: enum.OrderItemStatusPending,
 						},
 					},
 				},
@@ -846,14 +847,14 @@ func TestOrderCreate_CateringOrder(t *testing.T) {
 			return &service.CreateOrderResult{
 				Order: database.Order{
 					ID: orderID, OutletID: outletID, OrderNumber: "KWR-001",
-					OrderType: database.OrderTypeCATERING, Status: database.OrderStatusNEW,
+					OrderType: enum.OrderTypeCatering, Status: enum.OrderStatusNew,
 					CustomerID: pgtype.UUID{Bytes: customerID, Valid: true},
-					Subtotal: testNumeric("500000.00"), DiscountAmount: testNumeric("0.00"),
+					Subtotal:   testNumeric("500000.00"), DiscountAmount: testNumeric("0.00"),
 					TaxAmount: testNumeric("0.00"), TotalAmount: testNumeric("500000.00"),
-					CateringDate: pgtype.Timestamptz{Time: cateringTime, Valid: true},
-					CateringStatus: database.NullCateringStatus{CateringStatus: database.CateringStatusBOOKED, Valid: true},
+					CateringDate:     pgtype.Timestamptz{Time: cateringTime, Valid: true},
+					CateringStatus:   pgtype.Text{String: enum.CateringStatusBooked, Valid: true},
 					CateringDpAmount: testNumeric("200000.00"),
-					CreatedBy: claims.UserID, CreatedAt: now, UpdatedAt: now,
+					CreatedBy:        claims.UserID, CreatedAt: now, UpdatedAt: now,
 				},
 				Items: []service.OrderItemResult{
 					{
@@ -861,7 +862,7 @@ func TestOrderCreate_CateringOrder(t *testing.T) {
 							ID: uuid.New(), OrderID: orderID, ProductID: uuid.New(),
 							Quantity: 20, UnitPrice: testNumeric("25000.00"),
 							DiscountAmount: testNumeric("0.00"), Subtotal: testNumeric("500000.00"),
-							Status: database.OrderItemStatusPENDING,
+							Status: enum.OrderItemStatusPending,
 						},
 					},
 				},
@@ -871,9 +872,9 @@ func TestOrderCreate_CateringOrder(t *testing.T) {
 
 	router := setupOrderRouterWithAuth(svc, claims)
 	rr := doAuthRequest(t, router, "POST", "/outlets/"+outletID.String()+"/orders", map[string]interface{}{
-		"order_type":        "CATERING",
-		"customer_id":       customerID.String(),
-		"catering_date":     "2026-03-01T10:00:00Z",
+		"order_type":         "CATERING",
+		"customer_id":        customerID.String(),
+		"catering_date":      "2026-03-01T10:00:00Z",
 		"catering_dp_amount": "200000",
 		"items": []map[string]interface{}{
 			{"product_id": uuid.New().String(), "quantity": 20},
@@ -909,7 +910,7 @@ func TestOrderCreate_ResponseContainsNullFields(t *testing.T) {
 			return &service.CreateOrderResult{
 				Order: database.Order{
 					ID: orderID, OutletID: outletID, OrderNumber: "KWR-001",
-					OrderType: database.OrderTypeTAKEAWAY, Status: database.OrderStatusNEW,
+					OrderType: enum.OrderTypeTakeaway, Status: enum.OrderStatusNew,
 					Subtotal: testNumeric("15000.00"), DiscountAmount: testNumeric("0.00"),
 					TaxAmount: testNumeric("0.00"), TotalAmount: testNumeric("15000.00"),
 					CreatedBy: claims.UserID, CreatedAt: now, UpdatedAt: now,
@@ -920,7 +921,7 @@ func TestOrderCreate_ResponseContainsNullFields(t *testing.T) {
 							ID: uuid.New(), OrderID: orderID, ProductID: uuid.New(),
 							Quantity: 1, UnitPrice: testNumeric("15000.00"),
 							DiscountAmount: testNumeric("0.00"), Subtotal: testNumeric("15000.00"),
-							Status: database.OrderItemStatusPENDING,
+							Status: enum.OrderItemStatusPending,
 						},
 					},
 				},
@@ -1079,8 +1080,8 @@ func testDBOrder(outletID uuid.UUID) database.Order {
 		ID:             uuid.New(),
 		OutletID:       outletID,
 		OrderNumber:    "KWR-001",
-		OrderType:      database.OrderTypeDINEIN,
-		Status:         database.OrderStatusNEW,
+		OrderType:      enum.OrderTypeDineIn,
+		Status:         enum.OrderStatusNew,
 		Subtotal:       testNumeric("25000.00"),
 		DiscountAmount: testNumeric("0.00"),
 		TaxAmount:      testNumeric("0.00"),
@@ -1091,7 +1092,7 @@ func testDBOrder(outletID uuid.UUID) database.Order {
 	}
 }
 
-func testDBOrderWithStatus(outletID uuid.UUID, status database.OrderStatus) database.Order {
+func testDBOrderWithStatus(outletID uuid.UUID, status string) database.Order {
 	o := testDBOrder(outletID)
 	o.Status = status
 	return o
@@ -1106,7 +1107,7 @@ func testDBOrderItem(orderID uuid.UUID) database.OrderItem {
 		UnitPrice:      testNumeric("12500.00"),
 		DiscountAmount: testNumeric("0.00"),
 		Subtotal:       testNumeric("25000.00"),
-		Status:         database.OrderItemStatusPENDING,
+		Status:         enum.OrderItemStatusPending,
 	}
 }
 
@@ -1221,8 +1222,8 @@ func TestOrderList_WithStatusFilter(t *testing.T) {
 			if !arg.Status.Valid {
 				t.Error("status filter should be set")
 			}
-			if arg.Status.OrderStatus != database.OrderStatusNEW {
-				t.Errorf("status: got %v, want NEW", arg.Status.OrderStatus)
+			if arg.Status.String != enum.OrderStatusNew {
+				t.Errorf("status: got %v, want NEW", arg.Status.String)
 			}
 			return []database.Order{}, nil
 		},
@@ -1245,8 +1246,8 @@ func TestOrderList_WithTypeFilter(t *testing.T) {
 			if !arg.OrderType.Valid {
 				t.Error("order_type filter should be set")
 			}
-			if arg.OrderType.OrderType != database.OrderTypeDINEIN {
-				t.Errorf("order_type: got %v, want DINE_IN", arg.OrderType.OrderType)
+			if arg.OrderType.String != enum.OrderTypeDineIn {
+				t.Errorf("order_type: got %v, want DINE_IN", arg.OrderType.String)
 			}
 			return []database.Order{}, nil
 		},
@@ -1438,15 +1439,15 @@ func TestOrderGet_WithPayments(t *testing.T) {
 	order := testDBOrder(outletID)
 
 	payment := database.Payment{
-		ID:            uuid.New(),
-		OrderID:       order.ID,
-		PaymentMethod: database.PaymentMethodCASH,
-		Amount:        testNumeric("25000.00"),
-		Status:        database.PaymentStatusCOMPLETED,
+		ID:             uuid.New(),
+		OrderID:        order.ID,
+		PaymentMethod:  enum.PaymentMethodCash,
+		Amount:         testNumeric("25000.00"),
+		Status:         enum.PaymentStatusCompleted,
 		AmountReceived: testNumeric("30000.00"),
 		ChangeAmount:   testNumeric("5000.00"),
-		ProcessedBy:   claims.UserID,
-		ProcessedAt:   time.Now(),
+		ProcessedBy:    claims.UserID,
+		ProcessedAt:    time.Now(),
 	}
 
 	store := &mockOrderStore{
@@ -1525,19 +1526,19 @@ func TestOrderUpdateStatus_NewToPreparing(t *testing.T) {
 	outletID := uuid.New()
 	claims := testClaims(outletID)
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 	updatedOrder := order
-	updatedOrder.Status = database.OrderStatusPREPARING
+	updatedOrder.Status = enum.OrderStatusPreparing
 
 	store := &mockOrderStore{
 		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
 			return order, nil
 		},
 		updateOrderStatusFn: func(ctx context.Context, arg database.UpdateOrderStatusParams) (database.Order, error) {
-			if arg.Status != database.OrderStatusPREPARING {
+			if arg.Status != enum.OrderStatusPreparing {
 				t.Errorf("status: got %v, want PREPARING", arg.Status)
 			}
-			if arg.Status_2 != database.OrderStatusNEW {
+			if arg.Status_2 != enum.OrderStatusNew {
 				t.Errorf("current status: got %v, want NEW", arg.Status_2)
 			}
 			return updatedOrder, nil
@@ -1562,9 +1563,9 @@ func TestOrderUpdateStatus_PreparingToReady(t *testing.T) {
 	outletID := uuid.New()
 	claims := testClaims(outletID)
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusPREPARING)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusPreparing)
 	updatedOrder := order
-	updatedOrder.Status = database.OrderStatusREADY
+	updatedOrder.Status = enum.OrderStatusReady
 
 	store := &mockOrderStore{
 		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
@@ -1593,9 +1594,9 @@ func TestOrderUpdateStatus_ReadyToCompleted(t *testing.T) {
 	outletID := uuid.New()
 	claims := testClaims(outletID)
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusREADY)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusReady)
 	updatedOrder := order
-	updatedOrder.Status = database.OrderStatusCOMPLETED
+	updatedOrder.Status = enum.OrderStatusCompleted
 
 	store := &mockOrderStore{
 		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
@@ -1624,9 +1625,9 @@ func TestOrderUpdateStatus_NewToCancelled(t *testing.T) {
 	outletID := uuid.New()
 	claims := testClaims(outletID)
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 	updatedOrder := order
-	updatedOrder.Status = database.OrderStatusCANCELLED
+	updatedOrder.Status = enum.OrderStatusCancelled
 
 	store := &mockOrderStore{
 		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
@@ -1650,9 +1651,9 @@ func TestOrderUpdateStatus_PreparingToCancelled(t *testing.T) {
 	outletID := uuid.New()
 	claims := testClaims(outletID)
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusPREPARING)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusPreparing)
 	updatedOrder := order
-	updatedOrder.Status = database.OrderStatusCANCELLED
+	updatedOrder.Status = enum.OrderStatusCancelled
 
 	store := &mockOrderStore{
 		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
@@ -1676,19 +1677,19 @@ func TestOrderUpdateStatus_ReadyToCancelled(t *testing.T) {
 	outletID := uuid.New()
 	claims := testClaims(outletID)
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusREADY)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusReady)
 	updatedOrder := order
-	updatedOrder.Status = database.OrderStatusCANCELLED
+	updatedOrder.Status = enum.OrderStatusCancelled
 
 	store := &mockOrderStore{
 		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
 			return order, nil
 		},
 		updateOrderStatusFn: func(ctx context.Context, arg database.UpdateOrderStatusParams) (database.Order, error) {
-			if arg.Status != database.OrderStatusCANCELLED {
+			if arg.Status != enum.OrderStatusCancelled {
 				t.Errorf("status: got %v, want CANCELLED", arg.Status)
 			}
-			if arg.Status_2 != database.OrderStatusREADY {
+			if arg.Status_2 != enum.OrderStatusReady {
 				t.Errorf("current status: got %v, want READY", arg.Status_2)
 			}
 			return updatedOrder, nil
@@ -1713,7 +1714,7 @@ func TestOrderUpdateStatus_InvalidTransition_NewToCompleted(t *testing.T) {
 	outletID := uuid.New()
 	claims := testClaims(outletID)
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 
 	store := &mockOrderStore{
 		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
@@ -1734,7 +1735,7 @@ func TestOrderUpdateStatus_InvalidTransition_CompletedToNew(t *testing.T) {
 	outletID := uuid.New()
 	claims := testClaims(outletID)
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusCOMPLETED)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusCompleted)
 
 	store := &mockOrderStore{
 		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
@@ -1755,7 +1756,7 @@ func TestOrderUpdateStatus_InvalidTransition_ReadyToPreparing(t *testing.T) {
 	outletID := uuid.New()
 	claims := testClaims(outletID)
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusREADY)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusReady)
 
 	store := &mockOrderStore{
 		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
@@ -1781,7 +1782,7 @@ func TestOrderUpdateStatus_InvalidTransition_CancelledToAny(t *testing.T) {
 	outletID := uuid.New()
 	claims := testClaims(outletID)
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusCANCELLED)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusCancelled)
 
 	store := &mockOrderStore{
 		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
@@ -1865,9 +1866,9 @@ func TestOrderCancel_HappyPath_NewOrder(t *testing.T) {
 	outletID := uuid.New()
 	claims := testClaims(outletID)
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 	cancelledOrder := order
-	cancelledOrder.Status = database.OrderStatusCANCELLED
+	cancelledOrder.Status = enum.OrderStatusCancelled
 
 	store := &mockOrderStore{
 		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
@@ -1898,9 +1899,9 @@ func TestOrderCancel_HappyPath_PreparingOrder(t *testing.T) {
 	outletID := uuid.New()
 	claims := testClaims(outletID)
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusPREPARING)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusPreparing)
 	cancelledOrder := order
-	cancelledOrder.Status = database.OrderStatusCANCELLED
+	cancelledOrder.Status = enum.OrderStatusCancelled
 
 	store := &mockOrderStore{
 		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
@@ -1923,7 +1924,7 @@ func TestOrderCancel_CompletedOrder(t *testing.T) {
 	outletID := uuid.New()
 	claims := testClaims(outletID)
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusCOMPLETED)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusCompleted)
 
 	store := &mockOrderStore{
 		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
@@ -1948,7 +1949,7 @@ func TestOrderCancel_AlreadyCancelled(t *testing.T) {
 	outletID := uuid.New()
 	claims := testClaims(outletID)
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusCANCELLED)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusCancelled)
 
 	store := &mockOrderStore{
 		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
@@ -2004,9 +2005,9 @@ func TestOrderCancel_ReadyOrder(t *testing.T) {
 	outletID := uuid.New()
 	claims := testClaims(outletID)
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusREADY)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusReady)
 	cancelledOrder := order
-	cancelledOrder.Status = database.OrderStatusCANCELLED
+	cancelledOrder.Status = enum.OrderStatusCancelled
 
 	store := &mockOrderStore{
 		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
@@ -2034,14 +2035,14 @@ func TestAddItem_HappyPath(t *testing.T) {
 	productID := uuid.New()
 	itemID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 	order.ID = orderID
 
 	product := database.GetProductForOrderRow{
 		ID:        productID,
 		OutletID:  outletID,
 		BasePrice: testNumeric("25000.00"),
-		Station:   database.NullKitchenStation{KitchenStation: database.KitchenStationGRILL, Valid: true},
+		Station:   pgtype.Text{String: enum.StationGrill, Valid: true},
 	}
 
 	createdItem := database.OrderItem{
@@ -2052,7 +2053,7 @@ func TestAddItem_HappyPath(t *testing.T) {
 		UnitPrice:      testNumeric("25000.00"),
 		DiscountAmount: testNumeric("0.00"),
 		Subtotal:       testNumeric("50000.00"),
-		Status:         database.OrderItemStatusPENDING,
+		Status:         enum.OrderItemStatusPending,
 	}
 
 	updatedOrder := order
@@ -2102,7 +2103,7 @@ func TestAddItem_OrderNotNew(t *testing.T) {
 	claims := testClaims(outletID)
 	orderID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusPREPARING)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusPreparing)
 	order.ID = orderID
 
 	store := &mockOrderStore{
@@ -2128,7 +2129,7 @@ func TestUpdateItem_HappyPath(t *testing.T) {
 	orderID := uuid.New()
 	itemID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 	order.ID = orderID
 
 	currentItem := database.OrderItem{
@@ -2139,7 +2140,7 @@ func TestUpdateItem_HappyPath(t *testing.T) {
 		UnitPrice:      testNumeric("25000.00"),
 		DiscountAmount: testNumeric("0.00"),
 		Subtotal:       testNumeric("50000.00"),
-		Status:         database.OrderItemStatusPENDING,
+		Status:         enum.OrderItemStatusPending,
 	}
 
 	updatedItem := currentItem
@@ -2198,7 +2199,7 @@ func TestRemoveItem_HappyPath(t *testing.T) {
 	orderID := uuid.New()
 	itemID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 	order.ID = orderID
 
 	item := database.OrderItem{
@@ -2240,7 +2241,7 @@ func TestRemoveItem_LastItem(t *testing.T) {
 	orderID := uuid.New()
 	itemID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 	order.ID = orderID
 
 	store := &mockOrderStore{
@@ -2272,11 +2273,11 @@ func TestUpdateItemStatus_PendingToPreparing(t *testing.T) {
 	currentItem := database.OrderItem{
 		ID:      itemID,
 		OrderID: orderID,
-		Status:  database.OrderItemStatusPENDING,
+		Status:  enum.OrderItemStatusPending,
 	}
 
 	updatedItem := currentItem
-	updatedItem.Status = database.OrderItemStatusPREPARING
+	updatedItem.Status = enum.OrderItemStatusPreparing
 
 	store := &mockOrderStore{
 		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
@@ -2286,7 +2287,7 @@ func TestUpdateItemStatus_PendingToPreparing(t *testing.T) {
 			return currentItem, nil
 		},
 		updateOrderItemStatusFn: func(ctx context.Context, arg database.UpdateOrderItemStatusParams) (database.OrderItem, error) {
-			if arg.Status != database.OrderItemStatusPREPARING {
+			if arg.Status != enum.OrderItemStatusPreparing {
 				t.Errorf("status: got %v, want PREPARING", arg.Status)
 			}
 			return updatedItem, nil
@@ -2323,7 +2324,7 @@ func TestUpdateItemStatus_InvalidTransition(t *testing.T) {
 	currentItem := database.OrderItem{
 		ID:      itemID,
 		OrderID: orderID,
-		Status:  database.OrderItemStatusREADY,
+		Status:  enum.OrderItemStatusReady,
 	}
 
 	store := &mockOrderStore{
@@ -2355,14 +2356,14 @@ func TestAddItem_WithVariant(t *testing.T) {
 	variantID := uuid.New()
 	itemID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 	order.ID = orderID
 
 	product := database.GetProductForOrderRow{
 		ID:        productID,
 		OutletID:  outletID,
 		BasePrice: testNumeric("25000.00"),
-		Station:   database.NullKitchenStation{KitchenStation: database.KitchenStationGRILL, Valid: true},
+		Station:   pgtype.Text{String: enum.StationGrill, Valid: true},
 	}
 
 	variant := database.GetVariantForOrderRow{
@@ -2380,7 +2381,7 @@ func TestAddItem_WithVariant(t *testing.T) {
 		UnitPrice:      testNumeric("30000.00"), // base + variant adjustment
 		DiscountAmount: testNumeric("0.00"),
 		Subtotal:       testNumeric("30000.00"),
-		Status:         database.OrderItemStatusPENDING,
+		Status:         enum.OrderItemStatusPending,
 	}
 
 	updatedOrder := order
@@ -2428,14 +2429,14 @@ func TestAddItem_WithModifiers(t *testing.T) {
 	modifierID := uuid.New()
 	itemID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 	order.ID = orderID
 
 	product := database.GetProductForOrderRow{
 		ID:        productID,
 		OutletID:  outletID,
 		BasePrice: testNumeric("25000.00"),
-		Station:   database.NullKitchenStation{KitchenStation: database.KitchenStationGRILL, Valid: true},
+		Station:   pgtype.Text{String: enum.StationGrill, Valid: true},
 	}
 
 	modifier := database.GetModifierForOrderRow{
@@ -2452,7 +2453,7 @@ func TestAddItem_WithModifiers(t *testing.T) {
 		UnitPrice:      testNumeric("25000.00"),
 		DiscountAmount: testNumeric("0.00"),
 		Subtotal:       testNumeric("30000.00"), // base + modifier
-		Status:         database.OrderItemStatusPENDING,
+		Status:         enum.OrderItemStatusPending,
 	}
 
 	createdModifier := database.OrderItemModifier{
@@ -2515,14 +2516,14 @@ func TestAddItem_WithItemDiscount(t *testing.T) {
 	productID := uuid.New()
 	itemID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 	order.ID = orderID
 
 	product := database.GetProductForOrderRow{
 		ID:        productID,
 		OutletID:  outletID,
 		BasePrice: testNumeric("25000.00"),
-		Station:   database.NullKitchenStation{KitchenStation: database.KitchenStationGRILL, Valid: true},
+		Station:   pgtype.Text{String: enum.StationGrill, Valid: true},
 	}
 
 	createdItem := database.OrderItem{
@@ -2531,14 +2532,14 @@ func TestAddItem_WithItemDiscount(t *testing.T) {
 		ProductID: productID,
 		Quantity:  2,
 		UnitPrice: testNumeric("25000.00"),
-		DiscountType: database.NullDiscountType{
-			DiscountType: database.DiscountTypePERCENTAGE,
-			Valid:        true,
+		DiscountType: pgtype.Text{
+			String: enum.DiscountTypePercentage,
+			Valid:  true,
 		},
 		DiscountValue:  testNumeric("10.00"),
 		DiscountAmount: testNumeric("5000.00"), // 10% of 50000
 		Subtotal:       testNumeric("45000.00"),
-		Status:         database.OrderItemStatusPENDING,
+		Status:         enum.OrderItemStatusPending,
 	}
 
 	updatedOrder := order
@@ -2579,7 +2580,7 @@ func TestAddItem_ProductNotFound(t *testing.T) {
 	orderID := uuid.New()
 	productID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 	order.ID = orderID
 
 	store := &mockOrderStore{
@@ -2607,7 +2608,7 @@ func TestAddItem_InvalidProductID(t *testing.T) {
 	claims := testClaims(outletID)
 	orderID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 	order.ID = orderID
 
 	store := &mockOrderStore{
@@ -2632,7 +2633,7 @@ func TestAddItem_MissingProductID(t *testing.T) {
 	claims := testClaims(outletID)
 	orderID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 	order.ID = orderID
 
 	store := &mockOrderStore{
@@ -2656,7 +2657,7 @@ func TestAddItem_ZeroQuantity(t *testing.T) {
 	claims := testClaims(outletID)
 	orderID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 	order.ID = orderID
 
 	store := &mockOrderStore{
@@ -2706,7 +2707,7 @@ func TestUpdateItem_OrderNotNew(t *testing.T) {
 	orderID := uuid.New()
 	itemID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusPREPARING)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusPreparing)
 	order.ID = orderID
 
 	store := &mockOrderStore{
@@ -2731,7 +2732,7 @@ func TestUpdateItem_ItemNotFound(t *testing.T) {
 	orderID := uuid.New()
 	itemID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 	order.ID = orderID
 
 	store := &mockOrderStore{
@@ -2759,7 +2760,7 @@ func TestUpdateItem_ZeroQuantity(t *testing.T) {
 	orderID := uuid.New()
 	itemID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 	order.ID = orderID
 
 	store := &mockOrderStore{
@@ -2786,7 +2787,7 @@ func TestRemoveItem_OrderNotNew(t *testing.T) {
 	orderID := uuid.New()
 	itemID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusPREPARING)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusPreparing)
 	order.ID = orderID
 
 	store := &mockOrderStore{
@@ -2809,7 +2810,7 @@ func TestRemoveItem_ItemNotFound(t *testing.T) {
 	orderID := uuid.New()
 	itemID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusNEW)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusNew)
 	order.ID = orderID
 
 	store := &mockOrderStore{
@@ -2846,11 +2847,11 @@ func TestUpdateItemStatus_PreparingToReady(t *testing.T) {
 	currentItem := database.OrderItem{
 		ID:      itemID,
 		OrderID: orderID,
-		Status:  database.OrderItemStatusPREPARING,
+		Status:  enum.OrderItemStatusPreparing,
 	}
 
 	updatedItem := currentItem
-	updatedItem.Status = database.OrderItemStatusREADY
+	updatedItem.Status = enum.OrderItemStatusReady
 
 	store := &mockOrderStore{
 		getOrderFn: func(ctx context.Context, arg database.GetOrderParams) (database.Order, error) {
@@ -2946,7 +2947,7 @@ func TestUpdateItemStatus_CancelledOrder(t *testing.T) {
 	orderID := uuid.New()
 	itemID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusCANCELLED)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusCancelled)
 	order.ID = orderID
 
 	store := &mockOrderStore{
@@ -2980,7 +2981,7 @@ func TestUpdateItemStatus_CompletedOrder(t *testing.T) {
 	orderID := uuid.New()
 	itemID := uuid.New()
 
-	order := testDBOrderWithStatus(outletID, database.OrderStatusCOMPLETED)
+	order := testDBOrderWithStatus(outletID, enum.OrderStatusCompleted)
 	order.ID = orderID
 
 	store := &mockOrderStore{
@@ -3049,8 +3050,8 @@ func TestListActive_Success(t *testing.T) {
 					ID:             order1ID,
 					OutletID:       outletID,
 					OrderNumber:    "ORD-001",
-					OrderType:      database.OrderTypeDINEIN,
-					Status:         database.OrderStatusNEW,
+					OrderType:      enum.OrderTypeDineIn,
+					Status:         enum.OrderStatusNew,
 					Subtotal:       subtotal1,
 					DiscountAmount: discountAmt1,
 					TaxAmount:      taxAmt1,
@@ -3064,8 +3065,8 @@ func TestListActive_Success(t *testing.T) {
 					ID:             order2ID,
 					OutletID:       outletID,
 					OrderNumber:    "ORD-002",
-					OrderType:      database.OrderTypeTAKEAWAY,
-					Status:         database.OrderStatusPREPARING,
+					OrderType:      enum.OrderTypeTakeaway,
+					Status:         enum.OrderStatusPreparing,
 					Subtotal:       subtotal2,
 					DiscountAmount: discountAmt2,
 					TaxAmount:      taxAmt2,

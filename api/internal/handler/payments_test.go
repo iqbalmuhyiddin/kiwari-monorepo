@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/kiwari-pos/api/internal/auth"
 	"github.com/kiwari-pos/api/internal/database"
+	"github.com/kiwari-pos/api/internal/enum"
 	"github.com/kiwari-pos/api/internal/handler"
 	"github.com/kiwari-pos/api/internal/middleware"
 	"github.com/shopspring/decimal"
@@ -79,7 +80,7 @@ func (m *mockPaymentStore) CreatePayment(_ context.Context, arg database.CreateP
 func (m *mockPaymentStore) SumPaymentsByOrder(_ context.Context, orderID uuid.UUID) (pgtype.Numeric, error) {
 	total := decimal.Zero
 	for _, p := range m.payments {
-		if p.OrderID == orderID && p.Status == database.PaymentStatusCOMPLETED {
+		if p.OrderID == orderID && p.Status == enum.PaymentStatusCompleted {
 			amt, _ := numericToDecimal(p.Amount)
 			total = total.Add(amt)
 		}
@@ -89,10 +90,10 @@ func (m *mockPaymentStore) SumPaymentsByOrder(_ context.Context, orderID uuid.UU
 
 func (m *mockPaymentStore) CompleteOrder(_ context.Context, id uuid.UUID) (database.Order, error) {
 	o, ok := m.orders[id]
-	if !ok || o.Status == database.OrderStatusCANCELLED {
+	if !ok || o.Status == enum.OrderStatusCancelled {
 		return database.Order{}, pgx.ErrNoRows
 	}
-	o.Status = database.OrderStatusCOMPLETED
+	o.Status = enum.OrderStatusCompleted
 	now := time.Now()
 	o.CompletedAt = pgtype.Timestamptz{Time: now, Valid: true}
 	o.UpdatedAt = now
@@ -175,7 +176,7 @@ func TestAddPayment_Cash_HappyPath(t *testing.T) {
 		ID:          orderID,
 		OutletID:    outletID,
 		OrderNumber: "ORD-001",
-		Status:      database.OrderStatusNEW,
+		Status:      enum.OrderStatusNew,
 		TotalAmount: decimalToNumeric(decimal.NewFromInt(100000)),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -231,7 +232,7 @@ func TestAddPayment_QRIS_WithReference(t *testing.T) {
 		ID:          orderID,
 		OutletID:    outletID,
 		OrderNumber: "ORD-002",
-		Status:      database.OrderStatusNEW,
+		Status:      enum.OrderStatusNew,
 		TotalAmount: decimalToNumeric(decimal.NewFromInt(75000)),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -272,7 +273,7 @@ func TestAddPayment_Transfer(t *testing.T) {
 		ID:          orderID,
 		OutletID:    outletID,
 		OrderNumber: "ORD-003",
-		Status:      database.OrderStatusPREPARING,
+		Status:      enum.OrderStatusPreparing,
 		TotalAmount: decimalToNumeric(decimal.NewFromInt(200000)),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -311,7 +312,7 @@ func TestAddPayment_AutoCompleteOrder(t *testing.T) {
 		ID:          orderID,
 		OutletID:    outletID,
 		OrderNumber: "ORD-004",
-		Status:      database.OrderStatusREADY,
+		Status:      enum.OrderStatusReady,
 		TotalAmount: decimalToNumeric(decimal.NewFromInt(100000)),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -322,9 +323,9 @@ func TestAddPayment_AutoCompleteOrder(t *testing.T) {
 	store.payments[existingPayment] = database.Payment{
 		ID:            existingPayment,
 		OrderID:       orderID,
-		PaymentMethod: database.PaymentMethodCASH,
+		PaymentMethod: enum.PaymentMethodCash,
 		Amount:        decimalToNumeric(decimal.NewFromInt(40000)),
-		Status:        database.PaymentStatusCOMPLETED,
+		Status:        enum.PaymentStatusCompleted,
 		ProcessedBy:   userID,
 		ProcessedAt:   time.Now(),
 	}
@@ -362,7 +363,7 @@ func TestAddPayment_PartialPayment(t *testing.T) {
 		ID:          orderID,
 		OutletID:    outletID,
 		OrderNumber: "ORD-005",
-		Status:      database.OrderStatusNEW,
+		Status:      enum.OrderStatusNew,
 		TotalAmount: decimalToNumeric(decimal.NewFromInt(100000)),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -401,7 +402,7 @@ func TestAddPayment_ExceedsRemainingBalance(t *testing.T) {
 		ID:          orderID,
 		OutletID:    outletID,
 		OrderNumber: "ORD-006",
-		Status:      database.OrderStatusNEW,
+		Status:      enum.OrderStatusNew,
 		TotalAmount: decimalToNumeric(decimal.NewFromInt(100000)),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -412,9 +413,9 @@ func TestAddPayment_ExceedsRemainingBalance(t *testing.T) {
 	store.payments[existingPayment] = database.Payment{
 		ID:            existingPayment,
 		OrderID:       orderID,
-		PaymentMethod: database.PaymentMethodCASH,
+		PaymentMethod: enum.PaymentMethodCash,
 		Amount:        decimalToNumeric(decimal.NewFromInt(80000)),
-		Status:        database.PaymentStatusCOMPLETED,
+		Status:        enum.PaymentStatusCompleted,
 		ProcessedBy:   userID,
 		ProcessedAt:   time.Now(),
 	}
@@ -450,7 +451,7 @@ func TestAddPayment_CancelledOrder(t *testing.T) {
 		ID:          orderID,
 		OutletID:    outletID,
 		OrderNumber: "ORD-007",
-		Status:      database.OrderStatusCANCELLED,
+		Status:      enum.OrderStatusCancelled,
 		TotalAmount: decimalToNumeric(decimal.NewFromInt(100000)),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -481,7 +482,7 @@ func TestAddPayment_CompletedOrder(t *testing.T) {
 		ID:          orderID,
 		OutletID:    outletID,
 		OrderNumber: "ORD-007b",
-		Status:      database.OrderStatusCOMPLETED,
+		Status:      enum.OrderStatusCompleted,
 		TotalAmount: decimalToNumeric(decimal.NewFromInt(100000)),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -512,7 +513,7 @@ func TestAddPayment_AlreadyFullyPaid(t *testing.T) {
 		ID:          orderID,
 		OutletID:    outletID,
 		OrderNumber: "ORD-008",
-		Status:      database.OrderStatusNEW,
+		Status:      enum.OrderStatusNew,
 		TotalAmount: decimalToNumeric(decimal.NewFromInt(100000)),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -523,9 +524,9 @@ func TestAddPayment_AlreadyFullyPaid(t *testing.T) {
 	store.payments[existingPayment] = database.Payment{
 		ID:            existingPayment,
 		OrderID:       orderID,
-		PaymentMethod: database.PaymentMethodCASH,
+		PaymentMethod: enum.PaymentMethodCash,
 		Amount:        decimalToNumeric(decimal.NewFromInt(100000)),
-		Status:        database.PaymentStatusCOMPLETED,
+		Status:        enum.PaymentStatusCompleted,
 		ProcessedBy:   userID,
 		ProcessedAt:   time.Now(),
 	}
@@ -554,7 +555,7 @@ func TestAddPayment_Cash_MissingAmountReceived(t *testing.T) {
 	store.orders[orderID] = database.Order{
 		ID:          orderID,
 		OutletID:    outletID,
-		Status:      database.OrderStatusNEW,
+		Status:      enum.OrderStatusNew,
 		TotalAmount: decimalToNumeric(decimal.NewFromInt(100000)),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -584,7 +585,7 @@ func TestAddPayment_Cash_AmountReceivedLessThanAmount(t *testing.T) {
 	store.orders[orderID] = database.Order{
 		ID:          orderID,
 		OutletID:    outletID,
-		Status:      database.OrderStatusNEW,
+		Status:      enum.OrderStatusNew,
 		TotalAmount: decimalToNumeric(decimal.NewFromInt(100000)),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -615,7 +616,7 @@ func TestAddPayment_InvalidPaymentMethod(t *testing.T) {
 	store.orders[orderID] = database.Order{
 		ID:          orderID,
 		OutletID:    outletID,
-		Status:      database.OrderStatusNEW,
+		Status:      enum.OrderStatusNew,
 		TotalAmount: decimalToNumeric(decimal.NewFromInt(100000)),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -645,7 +646,7 @@ func TestAddPayment_InvalidAmount(t *testing.T) {
 	store.orders[orderID] = database.Order{
 		ID:          orderID,
 		OutletID:    outletID,
-		Status:      database.OrderStatusNEW,
+		Status:      enum.OrderStatusNew,
 		TotalAmount: decimalToNumeric(decimal.NewFromInt(100000)),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -727,7 +728,7 @@ func TestAddPayment_MissingAuth(t *testing.T) {
 	store.orders[orderID] = database.Order{
 		ID:          orderID,
 		OutletID:    outletID,
-		Status:      database.OrderStatusNEW,
+		Status:      enum.OrderStatusNew,
 		TotalAmount: decimalToNumeric(decimal.NewFromInt(100000)),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -763,12 +764,12 @@ func TestAddPayment_Catering_FirstPayment_DpPaid(t *testing.T) {
 		ID:          orderID,
 		OutletID:    outletID,
 		OrderNumber: "CAT-001",
-		OrderType:   database.OrderTypeCATERING,
-		Status:      database.OrderStatusNEW,
+		OrderType:   enum.OrderTypeCatering,
+		Status:      enum.OrderStatusNew,
 		TotalAmount: decimalToNumeric(decimal.NewFromInt(500000)),
-		CateringStatus: database.NullCateringStatus{
-			CateringStatus: database.CateringStatusBOOKED,
-			Valid:          true,
+		CateringStatus: pgtype.Text{
+			String: enum.CateringStatusBooked,
+			Valid:  true,
 		},
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -807,12 +808,12 @@ func TestAddPayment_Catering_FullPayment_Settled(t *testing.T) {
 		ID:          orderID,
 		OutletID:    outletID,
 		OrderNumber: "CAT-002",
-		OrderType:   database.OrderTypeCATERING,
-		Status:      database.OrderStatusREADY,
+		OrderType:   enum.OrderTypeCatering,
+		Status:      enum.OrderStatusReady,
 		TotalAmount: decimalToNumeric(decimal.NewFromInt(500000)),
-		CateringStatus: database.NullCateringStatus{
-			CateringStatus: database.CateringStatusDPPAID,
-			Valid:          true,
+		CateringStatus: pgtype.Text{
+			String: enum.CateringStatusDPPaid,
+			Valid:  true,
 		},
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -823,9 +824,9 @@ func TestAddPayment_Catering_FullPayment_Settled(t *testing.T) {
 	store.payments[existingPayment] = database.Payment{
 		ID:            existingPayment,
 		OrderID:       orderID,
-		PaymentMethod: database.PaymentMethodTRANSFER,
+		PaymentMethod: enum.PaymentMethodTransfer,
 		Amount:        decimalToNumeric(decimal.NewFromInt(100000)),
-		Status:        database.PaymentStatusCOMPLETED,
+		Status:        enum.PaymentStatusCompleted,
 		ProcessedBy:   userID,
 		ProcessedAt:   time.Now(),
 	}
@@ -866,7 +867,7 @@ func TestListPayments_HappyPath(t *testing.T) {
 	store.orders[orderID] = database.Order{
 		ID:       orderID,
 		OutletID: outletID,
-		Status:   database.OrderStatusNEW,
+		Status:   enum.OrderStatusNew,
 	}
 
 	// Add two payments
@@ -874,9 +875,9 @@ func TestListPayments_HappyPath(t *testing.T) {
 	store.payments[p1] = database.Payment{
 		ID:            p1,
 		OrderID:       orderID,
-		PaymentMethod: database.PaymentMethodCASH,
+		PaymentMethod: enum.PaymentMethodCash,
 		Amount:        decimalToNumeric(decimal.NewFromInt(50000)),
-		Status:        database.PaymentStatusCOMPLETED,
+		Status:        enum.PaymentStatusCompleted,
 		ProcessedBy:   userID,
 		ProcessedAt:   time.Now(),
 	}
@@ -885,9 +886,9 @@ func TestListPayments_HappyPath(t *testing.T) {
 	store.payments[p2] = database.Payment{
 		ID:            p2,
 		OrderID:       orderID,
-		PaymentMethod: database.PaymentMethodQRIS,
+		PaymentMethod: enum.PaymentMethodQRIS,
 		Amount:        decimalToNumeric(decimal.NewFromInt(30000)),
-		Status:        database.PaymentStatusCOMPLETED,
+		Status:        enum.PaymentStatusCompleted,
 		ProcessedBy:   userID,
 		ProcessedAt:   time.Now(),
 	}
@@ -918,7 +919,7 @@ func TestListPayments_Empty(t *testing.T) {
 	store.orders[orderID] = database.Order{
 		ID:       orderID,
 		OutletID: outletID,
-		Status:   database.OrderStatusNEW,
+		Status:   enum.OrderStatusNew,
 	}
 
 	claims := &auth.Claims{UserID: userID, OutletID: outletID, Role: "CASHIER"}

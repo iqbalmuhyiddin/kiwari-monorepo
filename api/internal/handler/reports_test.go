@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/kiwari-pos/api/internal/auth"
 	"github.com/kiwari-pos/api/internal/database"
+	"github.com/kiwari-pos/api/internal/enum"
 	"github.com/kiwari-pos/api/internal/handler"
 	"github.com/kiwari-pos/api/internal/middleware"
 	"github.com/shopspring/decimal"
@@ -311,12 +312,12 @@ func TestPaymentSummary(t *testing.T) {
 	store := &mockReportsStore{
 		paymentSummary: []database.GetPaymentSummaryRow{
 			{
-				PaymentMethod:    database.PaymentMethodCASH,
+				PaymentMethod:    enum.PaymentMethodCash,
 				TransactionCount: 20,
 				TotalAmount:      toNumeric("800000.00"),
 			},
 			{
-				PaymentMethod:    database.PaymentMethodQRIS,
+				PaymentMethod:    enum.PaymentMethodQRIS,
 				TransactionCount: 15,
 				TotalAmount:      toNumeric("600000.00"),
 			},

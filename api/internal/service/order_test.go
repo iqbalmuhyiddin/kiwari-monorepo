@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/kiwari-pos/api/internal/database"
+	"github.com/kiwari-pos/api/internal/enum"
 	"github.com/shopspring/decimal"
 )
 
@@ -126,7 +127,7 @@ func defaultStore(outletID, productID uuid.UUID) *mockOrderStore {
 					ID:        productID,
 					OutletID:  outletID,
 					BasePrice: makeNumeric("25000.00"),
-					Station:   database.NullKitchenStation{KitchenStation: database.KitchenStationGRILL, Valid: true},
+					Station:   pgtype.Text{String: enum.StationGrill, Valid: true},
 				}, nil
 			}
 			return database.GetProductForOrderRow{}, pgx.ErrNoRows
@@ -143,7 +144,7 @@ func defaultStore(outletID, productID uuid.UUID) *mockOrderStore {
 				OutletID:       arg.OutletID,
 				OrderNumber:    arg.OrderNumber,
 				OrderType:      arg.OrderType,
-				Status:         database.OrderStatusNEW,
+				Status:         enum.OrderStatusNew,
 				Subtotal:       arg.Subtotal,
 				DiscountType:   arg.DiscountType,
 				DiscountValue:  arg.DiscountValue,
@@ -166,7 +167,7 @@ func defaultStore(outletID, productID uuid.UUID) *mockOrderStore {
 				DiscountAmount: arg.DiscountAmount,
 				Subtotal:       arg.Subtotal,
 				Notes:          arg.Notes,
-				Status:         database.OrderItemStatusPENDING,
+				Status:         enum.OrderItemStatusPending,
 				Station:        arg.Station,
 			}, nil
 		},
@@ -470,7 +471,7 @@ func TestCreateOrder_BasicPrice(t *testing.T) {
 		captured = arg
 		return database.Order{
 			ID: uuid.New(), OutletID: arg.OutletID, OrderNumber: arg.OrderNumber,
-			OrderType: arg.OrderType, Status: database.OrderStatusNEW,
+			OrderType: arg.OrderType, Status: enum.OrderStatusNew,
 			Subtotal: arg.Subtotal, TotalAmount: arg.TotalAmount,
 			TaxAmount: arg.TaxAmount, DiscountAmount: arg.DiscountAmount,
 			CreatedBy: arg.CreatedBy,
@@ -484,7 +485,7 @@ func TestCreateOrder_BasicPrice(t *testing.T) {
 			ID: uuid.New(), OrderID: arg.OrderID, ProductID: arg.ProductID,
 			Quantity: arg.Quantity, UnitPrice: arg.UnitPrice,
 			Subtotal: arg.Subtotal, DiscountAmount: arg.DiscountAmount,
-			Status: database.OrderItemStatusPENDING, Station: arg.Station,
+			Status: enum.OrderItemStatusPending, Station: arg.Station,
 		}, nil
 	}
 
@@ -542,7 +543,7 @@ func TestCreateOrder_WithVariant(t *testing.T) {
 		return database.OrderItem{
 			ID: uuid.New(), OrderID: arg.OrderID, ProductID: arg.ProductID,
 			Quantity: arg.Quantity, UnitPrice: arg.UnitPrice,
-			Subtotal: arg.Subtotal, Status: database.OrderItemStatusPENDING,
+			Subtotal: arg.Subtotal, Status: enum.OrderItemStatusPending,
 		}, nil
 	}
 
@@ -592,7 +593,7 @@ func TestCreateOrder_WithModifiers(t *testing.T) {
 		return database.OrderItem{
 			ID: uuid.New(), OrderID: arg.OrderID, ProductID: arg.ProductID,
 			Quantity: arg.Quantity, UnitPrice: arg.UnitPrice,
-			Subtotal: arg.Subtotal, Status: database.OrderItemStatusPENDING,
+			Subtotal: arg.Subtotal, Status: enum.OrderItemStatusPending,
 		}, nil
 	}
 
@@ -638,13 +639,13 @@ func TestCreateOrder_MultipleItems(t *testing.T) {
 			return database.GetProductForOrderRow{
 				ID: productA, OutletID: outletID,
 				BasePrice: makeNumeric("10000.00"),
-				Station:   database.NullKitchenStation{KitchenStation: database.KitchenStationGRILL, Valid: true},
+				Station:   pgtype.Text{String: enum.StationGrill, Valid: true},
 			}, nil
 		case productB:
 			return database.GetProductForOrderRow{
 				ID: productB, OutletID: outletID,
 				BasePrice: makeNumeric("15000.00"),
-				Station:   database.NullKitchenStation{KitchenStation: database.KitchenStationBEVERAGE, Valid: true},
+				Station:   pgtype.Text{String: enum.StationBeverage, Valid: true},
 			}, nil
 		}
 		return database.GetProductForOrderRow{}, pgx.ErrNoRows
@@ -655,7 +656,7 @@ func TestCreateOrder_MultipleItems(t *testing.T) {
 		capturedOrder = arg
 		return database.Order{
 			ID: uuid.New(), OutletID: arg.OutletID, OrderNumber: arg.OrderNumber,
-			OrderType: arg.OrderType, Status: database.OrderStatusNEW,
+			OrderType: arg.OrderType, Status: enum.OrderStatusNew,
 			Subtotal: arg.Subtotal, TotalAmount: arg.TotalAmount,
 			TaxAmount: arg.TaxAmount, DiscountAmount: arg.DiscountAmount,
 			CreatedBy: arg.CreatedBy,
@@ -702,7 +703,7 @@ func TestCreateOrder_ItemPercentageDiscount(t *testing.T) {
 			ID: uuid.New(), OrderID: arg.OrderID, ProductID: arg.ProductID,
 			Quantity: arg.Quantity, UnitPrice: arg.UnitPrice,
 			Subtotal: arg.Subtotal, DiscountAmount: arg.DiscountAmount,
-			Status: database.OrderItemStatusPENDING,
+			Status: enum.OrderItemStatusPending,
 		}, nil
 	}
 
@@ -747,7 +748,7 @@ func TestCreateOrder_ItemFixedDiscount(t *testing.T) {
 			ID: uuid.New(), OrderID: arg.OrderID, ProductID: arg.ProductID,
 			Quantity: arg.Quantity, UnitPrice: arg.UnitPrice,
 			Subtotal: arg.Subtotal, DiscountAmount: arg.DiscountAmount,
-			Status: database.OrderItemStatusPENDING,
+			Status: enum.OrderItemStatusPending,
 		}, nil
 	}
 
@@ -790,7 +791,7 @@ func TestCreateOrder_OrderPercentageDiscount(t *testing.T) {
 		capturedOrder = arg
 		return database.Order{
 			ID: uuid.New(), OutletID: arg.OutletID, OrderNumber: arg.OrderNumber,
-			OrderType: arg.OrderType, Status: database.OrderStatusNEW,
+			OrderType: arg.OrderType, Status: enum.OrderStatusNew,
 			Subtotal: arg.Subtotal, TotalAmount: arg.TotalAmount,
 			DiscountAmount: arg.DiscountAmount, TaxAmount: arg.TaxAmount,
 			CreatedBy: arg.CreatedBy,
@@ -833,7 +834,7 @@ func TestCreateOrder_OrderFixedDiscount(t *testing.T) {
 		capturedOrder = arg
 		return database.Order{
 			ID: uuid.New(), OutletID: arg.OutletID, OrderNumber: arg.OrderNumber,
-			OrderType: arg.OrderType, Status: database.OrderStatusNEW,
+			OrderType: arg.OrderType, Status: enum.OrderStatusNew,
 			Subtotal: arg.Subtotal, TotalAmount: arg.TotalAmount,
 			DiscountAmount: arg.DiscountAmount, TaxAmount: arg.TaxAmount,
 			CreatedBy: arg.CreatedBy,
@@ -874,7 +875,7 @@ func TestCreateOrder_NegativeSubtotalClampedToZero(t *testing.T) {
 		capturedOrder = arg
 		return database.Order{
 			ID: uuid.New(), OutletID: arg.OutletID, OrderNumber: arg.OrderNumber,
-			OrderType: arg.OrderType, Status: database.OrderStatusNEW,
+			OrderType: arg.OrderType, Status: enum.OrderStatusNew,
 			Subtotal: arg.Subtotal, TotalAmount: arg.TotalAmount,
 			DiscountAmount: arg.DiscountAmount, TaxAmount: arg.TaxAmount,
 			CreatedBy: arg.CreatedBy,
@@ -914,7 +915,7 @@ func TestCreateOrder_ItemNegativeSubtotalClampedToZero(t *testing.T) {
 			ID: uuid.New(), OrderID: arg.OrderID, ProductID: arg.ProductID,
 			Quantity: arg.Quantity, UnitPrice: arg.UnitPrice,
 			Subtotal: arg.Subtotal, DiscountAmount: arg.DiscountAmount,
-			Status: database.OrderItemStatusPENDING,
+			Status: enum.OrderItemStatusPending,
 		}, nil
 	}
 
@@ -959,7 +960,7 @@ func TestCreateOrder_FirstOrderOfDay(t *testing.T) {
 		capturedOrder = arg
 		return database.Order{
 			ID: uuid.New(), OutletID: arg.OutletID, OrderNumber: arg.OrderNumber,
-			OrderType: arg.OrderType, Status: database.OrderStatusNEW,
+			OrderType: arg.OrderType, Status: enum.OrderStatusNew,
 			Subtotal: arg.Subtotal, TotalAmount: arg.TotalAmount,
 			TaxAmount: arg.TaxAmount, DiscountAmount: arg.DiscountAmount,
 			CreatedBy: arg.CreatedBy,
@@ -993,7 +994,7 @@ func TestCreateOrder_SubsequentOrder(t *testing.T) {
 		capturedOrder = arg
 		return database.Order{
 			ID: uuid.New(), OutletID: arg.OutletID, OrderNumber: arg.OrderNumber,
-			OrderType: arg.OrderType, Status: database.OrderStatusNEW,
+			OrderType: arg.OrderType, Status: enum.OrderStatusNew,
 			Subtotal: arg.Subtotal, TotalAmount: arg.TotalAmount,
 			TaxAmount: arg.TaxAmount, DiscountAmount: arg.DiscountAmount,
 			CreatedBy: arg.CreatedBy,
@@ -1033,7 +1034,7 @@ func TestCreateOrder_RetryOnUniqueViolation(t *testing.T) {
 		// Second attempt: success
 		return database.Order{
 			ID: uuid.New(), OutletID: arg.OutletID, OrderNumber: arg.OrderNumber,
-			OrderType: arg.OrderType, Status: database.OrderStatusNEW,
+			OrderType: arg.OrderType, Status: enum.OrderStatusNew,
 			Subtotal: arg.Subtotal, TotalAmount: arg.TotalAmount,
 			TaxAmount: arg.TaxAmount, DiscountAmount: arg.DiscountAmount,
 			CreatedBy: arg.CreatedBy,
@@ -1122,7 +1123,7 @@ func TestCreateOrder_CateringHappyPath(t *testing.T) {
 		capturedOrder = arg
 		return database.Order{
 			ID: uuid.New(), OutletID: arg.OutletID, OrderNumber: arg.OrderNumber,
-			OrderType: arg.OrderType, Status: database.OrderStatusNEW,
+			OrderType: arg.OrderType, Status: enum.OrderStatusNew,
 			Subtotal: arg.Subtotal, TotalAmount: arg.TotalAmount,
 			TaxAmount: arg.TaxAmount, DiscountAmount: arg.DiscountAmount,
 			CateringDate: arg.CateringDate, CateringStatus: arg.CateringStatus,
@@ -1147,13 +1148,13 @@ func TestCreateOrder_CateringHappyPath(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if capturedOrder.OrderType != database.OrderTypeCATERING {
+	if capturedOrder.OrderType != enum.OrderTypeCatering {
 		t.Errorf("order_type: got %v, want CATERING", capturedOrder.OrderType)
 	}
 	if !capturedOrder.CateringDate.Valid {
 		t.Error("catering_date should be set")
 	}
-	if !capturedOrder.CateringStatus.Valid || capturedOrder.CateringStatus.CateringStatus != database.CateringStatusBOOKED {
+	if !capturedOrder.CateringStatus.Valid || capturedOrder.CateringStatus.String != enum.CateringStatusBooked {
 		t.Errorf("catering_status: got %v, want BOOKED", capturedOrder.CateringStatus)
 	}
 	if !capturedOrder.CustomerID.Valid {

@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/kiwari-pos/api/internal/database"
+	"github.com/kiwari-pos/api/internal/enum"
 	"github.com/kiwari-pos/api/internal/handler"
 )
 
@@ -120,7 +121,7 @@ func (m *mockCustomerStore) GetCustomerStats(_ context.Context, arg database.Get
 	var totalSpend, sumForAvg pgtype.Numeric
 
 	for _, o := range m.orders {
-		if o.CustomerID.Valid && o.CustomerID.Bytes == arg.CustomerID.Bytes && o.OutletID == arg.OutletID && o.Status != database.OrderStatusCANCELLED {
+		if o.CustomerID.Valid && o.CustomerID.Bytes == arg.CustomerID.Bytes && o.OutletID == arg.OutletID && o.Status != enum.OrderStatusCancelled {
 			totalOrders++
 			if totalSpend.Valid {
 				totalSpend = o.TotalAmount
@@ -772,7 +773,7 @@ func TestCustomerStatsWithOrders(t *testing.T) {
 		ID:          uuid.New(),
 		OutletID:    outletID,
 		CustomerID:  pgtype.UUID{Bytes: customerID, Valid: true},
-		Status:      database.OrderStatusCOMPLETED,
+		Status:      enum.OrderStatusCompleted,
 		TotalAmount: totalAmount,
 		CreatedAt:   time.Now(),
 	}
@@ -867,8 +868,8 @@ func TestCustomerOrderHistory(t *testing.T) {
 		OutletID:    outletID,
 		OrderNumber: "ORD-001",
 		CustomerID:  pgtype.UUID{Bytes: customerID, Valid: true},
-		OrderType:   database.OrderTypeDINEIN,
-		Status:      database.OrderStatusCOMPLETED,
+		OrderType:   enum.OrderTypeDineIn,
+		Status:      enum.OrderStatusCompleted,
 		TotalAmount: totalAmount,
 		CreatedBy:   uuid.New(),
 		CreatedAt:   time.Now(),
