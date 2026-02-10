@@ -61,7 +61,7 @@ Shapes: 8dp chips, 10dp buttons, 12dp cards, 16dp sheets
 
 ## Deployment
 
-VPS at `nasibakarkiwari.com`: `pos-api.` (API:8081), `pos.` (admin:3001). NPM + Cloudflare DNS (Full Strict SSL, WS ON).
+VPS at `nasibakarkiwari.com`: `pos-api.` (API:8081), `admin.` (admin:3000), `stg-admin.` (staging admin:3000). NPM + Cloudflare DNS (Full Strict SSL, WS ON).
 CI/CD: GitHub Actions → ghcr.io → SSH deploy. Push main → staging, tag v* → production.
 
 ## Environment
