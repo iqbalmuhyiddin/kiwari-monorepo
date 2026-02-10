@@ -7,13 +7,13 @@ services:
     networks:
       - proxy
 
-  # pos-admin:
-  #   image: ghcr.io/iqbalmuhyiddin/kiwari-admin:latest
-  #   container_name: pos-admin
-  #   restart: unless-stopped
-  #   env_file: admin.env
-  #   networks:
-  #     - proxy
+  pos-admin:
+    image: ghcr.io/iqbalmuhyiddin/kiwari-admin:latest
+    container_name: pos-admin
+    restart: unless-stopped
+    env_file: admin.env
+    networks:
+      - proxy
 
 networks:
   proxy:
