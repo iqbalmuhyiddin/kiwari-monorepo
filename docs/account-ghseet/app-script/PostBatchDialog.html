@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    #status {
+      margin-top: 16px;
+      padding: 8px;
+      border-radius: 4px;
+      display: none;
+    }
+    #status.info { background: #e3f2fd; color: #1565c0; display: block; }
+    #status.success { background: #e8f5e9; color: #2e7d32; display: block; }
+    #status.error { background: #ffebee; color: #c62828; display: block; }
+  </style>
+</head>
+<body>
+  <h3>Post Reimbursement Batch</h3>
+
+  <label>Payment Date</label><br>
+  <input type="date" id="paymentDate" required><br><br>
+
+  <label>Cash Account</label><br>
+  <select id="cashAccount" required></select><br><br>
+
+  <button onclick="submit()">Post Batch</button>
+  <button onclick="google.script.host.close()">Cancel</button>
+
+  <div id="status"></div>
+
+  <script>
+    document.getElementById('paymentDate').value =
+      new Date().toISOString().slice(0, 10);
+
+    google.script.run.withSuccessHandler(accounts => {
+      const select = document.getElementById('cashAccount');
+      accounts.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.code;
+        opt.textContent = a.display;
+        select.appendChild(opt);
+      });
+    }).getActiveCashAccounts();
+
+    function submit() {
+      const btn = document.querySelector('button');
+      const status = document.getElementById('status');
+
+      btn.disabled = true;
+      btn.textContent = 'Posting...';
+
+      status.className = 'info';
+      status.textContent = 'Validating and posting transactions...';
+
+      const cashSelect = document.getElementById('cashAccount');
+      const selectedOption = cashSelect.options[cashSelect.selectedIndex];
+
+      google.script.run
+        .withSuccessHandler(() => {
+          status.className = 'success';
+          status.textContent = 'Batch posted successfully!';
+          setTimeout(() => google.script.host.close(), 1500);
+        })
+        .withFailureHandler((err) => {
+          status.className = 'error';
+          status.textContent = 'Error: ' + err.message;
+          btn.disabled = false;
+          btn.textContent = 'Post Batch';
+        })
+        .postReimbursementBatch({
+          paymentDate: document.getElementById('paymentDate').value,
+          cashAccountCode: cashSelect.value,
+          cashAccountDisplay: selectedOption.textContent
+        });
+    }
+  </script>
+</body>
+</html>
