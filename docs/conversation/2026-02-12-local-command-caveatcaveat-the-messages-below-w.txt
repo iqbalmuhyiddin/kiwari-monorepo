@@ -1,0 +1,1408 @@
+
+           Claude Code v2.1.39
+ ▐▛███▜▌   Opus 4.6 · Claude Max
+▝▜█████▛▘  ~/dvlpr/kiwari-monorepo
+  ▘▘ ▝▝    Opus 4.6 is here · $50 free extra usage · Try fast mode or use i…
+
+❯ /clear 
+  ⎿  (no content)
+
+❯ /superpowers:using-superpowers 
+
+⏺ ★ Insight ─────────────────────────────────────
+  Skills system loaded. This project uses a superpowers plugin system that
+  routes tasks through specialized workflows before execution. The key
+  principle: check for applicable skills before taking any action.
+  ─────────────────────────────────────────────────
+
+  Ready to help. What would you like to work on?
+
+❯ check implementation plan phase 2,3,4 is all align and complete. use      
+  /writing-plans and superpowers skill.                                     
+  @docs/plans/2026-02-11-accounting-module-design.md                        
+  @docs/plans/2026-02-11-accounting-phase2-plan.md                          
+  @docs/plans/2026-02-11-accounting-phase3-plan.md                          
+  @docs/plans/2026-02-11-accounting-phase4-plan.md                          
+  ⎿  Read docs/plans/2026-02-11-accounting-module-design.md (579 lines)
+  ⎿  Read docs/plans/2026-02-11-accounting-phase2-plan.md (2118 lines)
+  ⎿  Read docs/plans/2026-02-11-accounting-phase3-plan.md (1302 lines)
+  ⎿  Read docs/plans/2026-02-11-accounting-phase4-plan.md (1949 lines)
+
+⏺ I'll invoke the writing-plans skill first since this is about reviewing
+  implementation plans.
+
+⏺ Skill(superpowers:writing-plans)
+  ⎿  Successfully loaded skill
+
+⏺ I'm using the writing-plans skill to review the implementation plans for
+  alignment and completeness.
+
+  Let me first explore the current codebase state to understand what Phase 1
+  delivered, then cross-reference all plans against the design doc.
+
+⏺ Explore(Explore accounting codebase state) Sonnet 4.5
+  ⎿  Done (28 tool uses · 75.0k tokens · 2m 52s)
+
+⏺ I'm using the writing-plans skill to review the implementation plans for
+  alignment and completeness.
+
+  I've got the full codebase state from Phase 1. Now let me do a systematic
+  cross-reference of all three remaining phase plans against the design doc and
+  each other.
+
+  ★ Insight ─────────────────────────────────────
+  This kind of plan review is critical for multi-phase projects. Each phase plan
+   was likely written at the same time, but subtle assumptions in one phase can
+  break invariants in another. The key things to check: shared state
+  (transaction codes, DB schema), interface contracts between phases, and DRY
+  across handler code.
+  ─────────────────────────────────────────────────
+
+  Let me check a few specific code areas to verify my concerns.
+
+⏺ Read 5 files (ctrl+o to expand)
+
+⏺ Now let me check the matcher interface since Phase 2's WhatsApp handler
+  depends on it.
+
+⏺ Read 2 files (ctrl+o to expand)
+
+⏺ Now I have the complete picture. Let me compile the full cross-reference
+  analysis.
+
+  ---
+  Plan Alignment Review: Phases 2, 3, 4 vs Design Doc
+
+  Methodology
+
+  I cross-referenced every feature, endpoint, page, and data flow in the design
+  doc (2026-02-11-accounting-module-design.md) against the three implementation
+  plans, and verified alignment with the Phase 1 codebase that already exists.
+
+  ---
+  Feature Coverage (Design Doc → Plan Mapping)
+  Design Doc Feature: Reimbursement CRUD
+  Phase: P2
+  Plan Task: Tasks 1, 3
+  Status: Covered
+  ────────────────────────────────────────
+  Design Doc Feature: Reimbursement batch posting (two-leg entries)
+  Phase: P2
+  Plan Task: Task 4
+  Status: Covered
+  ────────────────────────────────────────
+  Design Doc Feature: WhatsApp message parser
+  Phase: P2
+  Plan Task: Task 2
+  Status: Covered
+  ────────────────────────────────────────
+  Design Doc Feature: WhatsApp → reimbursement endpoint
+  Phase: P2
+  Plan Task: Task 5
+  Status: Covered
+  ────────────────────────────────────────
+  Design Doc Feature: Reimbursement admin page
+  Phase: P2
+  Plan Task: Task 7
+  Status: Covered
+  ────────────────────────────────────────
+  Design Doc Feature: P&L report (SQL aggregation)
+  Phase: P3
+  Plan Task: Tasks 1, 2
+  Status: Covered
+  ────────────────────────────────────────
+  Design Doc Feature: Cash Flow report
+  Phase: P3
+  Plan Task: Tasks 1, 2
+  Status: Covered
+  ────────────────────────────────────────
+  Design Doc Feature: Expense breakdown by account
+  Phase: P3
+  Plan Task: Tasks 1, 2
+  Status: Covered
+  ────────────────────────────────────────
+  Design Doc Feature: Dashboard (Ringkasan)
+  Phase: P3
+  Plan Task: Tasks 1, 3, 6
+  Status: Covered
+  ────────────────────────────────────────
+  Design Doc Feature: CSV export (reports)
+  Phase: P3
+  Plan Task: Task 5
+  Status: Covered (client-side)
+  ────────────────────────────────────────
+  Design Doc Feature: POS → daily summary aggregation
+  Phase: P4
+  Plan Task: Tasks 1, 2
+  Status: Covered
+  ────────────────────────────────────────
+  Design Doc Feature: Manual sales entry (GoFood, etc.)
+  Phase: P4
+  Plan Task: Tasks 1, 2
+  Status: Covered
+  ────────────────────────────────────────
+  Design Doc Feature: Sales → journal posting
+  Phase: P4
+  Plan Task: Task 2
+  Status: Covered
+  ────────────────────────────────────────
+  Design Doc Feature: Payroll entry + posting
+  Phase: P4
+  Plan Task: Tasks 1, 3
+  Status: Covered
+  ────────────────────────────────────────
+  Design Doc Feature: Full ledger view
+  Phase: P4
+  Plan Task: Tasks 1, 4, 8
+  Status: Covered
+  ────────────────────────────────────────
+  Design Doc Feature: Manual journal entry
+  Phase: P4
+  Plan Task: Task 4
+  Status: Covered
+  ────────────────────────────────────────
+  Design Doc Feature: Complete sidebar navigation (8 items)
+  Phase: P4
+  Plan Task: Task 5
+  Status: Covered
+  All features from the design doc are accounted for. No missing features.
+
+  ---
+  CRITICAL Issues (Would Cause Bugs in Production)
+
+  1. Transaction Code Sequence Collision (Phase 2 + Phase 4)
+
+  The problem: Phase 1's GetNextTransactionCode query (line 24-26 of
+  acct_cash_transactions.sql) does a global MAX across ALL transaction codes:
+
+  SELECT COALESCE(MAX(transaction_code), 'PCS000000')::text AS max_code
+  FROM acct_cash_transactions;
+
+  Phase 2's reimbursement batch posting uses this same query to generate
+  PCS-prefixed codes. Phase 4 introduces SLS/PYR/JNL prefix codes with
+  prefix-specific queries, but never fixes the global query.
+
+  What breaks: After Phase 4 creates SLS000001, the global MAX becomes
+  "SLS000001" (alphabetically: SLS > PYR > PCS > JNL). Next purchase entry
+  extracts maxCode[3:] = "000001", increments to 2, creates PCS000002. But
+  PCS000002 likely already exists from the 38k historical transactions — UNIQUE 
+  constraint violation, 500 error.
+
+  The fix:
+  - Add GetNextPurchaseCode query: WHERE transaction_code LIKE 'PCS%'
+  - Update purchase.go to use GetNextPurchaseCode instead of
+  GetNextTransactionCode
+  - Update Phase 2's batch posting to use GetNextPurchaseCode
+  - Keep the old GetNextTransactionCode for backwards compatibility during Phase
+   2/3, then remove it in Phase 4
+
+  When to fix: Phase 2 plan Task 1 (add the query) + Phase 4 plan Task 1 (update
+   purchase handler).
+
+  2. Sales Batch Posting Without DB Transaction (Phase 4)
+
+  The problem: Phase 4 Task 2's PostSales handler creates multiple
+  cash_transactions in a loop (one per sales summary) without pool.Begin(). If
+  it fails midway, some summaries are posted and some aren't — partial,
+  inconsistent state.
+
+  Compare: Phase 2's reimbursement PostBatch correctly uses pool.Begin() →
+  tx.Commit() with defer tx.Rollback().
+
+  The fix: Add pool *pgxpool.Pool to SalesHandler constructor (like
+  ReimbursementHandler), use pool.Begin() in PostSales.
+
+  Impact: Without this fix, a network hiccup or constraint error during batch
+  posting leaves the accounting data in an inconsistent state that requires
+  manual database intervention to fix.
+
+  ---
+  IMPORTANT Issues (DRY Violations, Missing Features)
+
+  3. Duplicate Numeric-to-String Functions
+
+  Three different functions for the same job across phases:
+  Function: numericToStringPtr
+  File (Phase): master.go (P1)
+  Pattern: n.Value() → decimal.NewFromString(val.(string)) → *string
+  ────────────────────────────────────────
+  Function: numericToString
+  File (Phase): reimbursement.go (P2)
+  Pattern: n.Value() → decimal.NewFromString(val.(string)) → string
+  ────────────────────────────────────────
+  Function: numericToDecimalString
+  File (Phase): sales.go (P4)
+  Pattern: n.Value() → decimal.NewFromString(fmt.Sprintf("%v", val)) → string
+  The fix: Define ONE canonical numericToString(pgtype.Numeric) string in a
+  shared location (e.g., helpers.go in the handler package). Phase 2 should
+  introduce this, and Phase 4 should reuse it.
+
+  4. Duplicate Transaction Response Types
+  Type: transactionResponse
+  File (Phase): purchase.go (P1)
+  Fields: 9 fields (no cash_account_id, outlet_id, reimb_batch_id)
+  ────────────────────────────────────────
+  Type: transactionResponse
+  File (Phase): dashboard.go (P3)
+  Fields: 13 fields (full)
+  ────────────────────────────────────────
+  Type: ledgerTransactionResponse
+  File (Phase): ledger.go (P4)
+  Fields: 13 fields (identical to P3)
+  The fix: Phase 3 should export TransactionResponse and ToTransactionResponse()
+   as the canonical type. Phase 4's ledger should reuse it. Phase 1's
+  transactionResponse stays as-is (it's a slimmer purchase-specific view).
+
+  5. Missing Search Text Filter on Ledger (Phase 4)
+
+  Design doc says (line 338): "Filterable: date range, line_type, account, 
+  cash_account, outlet, search text"
+
+  Phase 4's ListAcctCashTransactions query has 6 filters but no description text
+   search. The CountAcctCashTransactions query also lacks it.
+
+  The fix: Add to both queries:
+  AND (sqlc.narg('search')::text IS NULL OR description ILIKE '%' ||
+  sqlc.narg('search') || '%')
+  Add Search pgtype.Text to the handler's filter params.
+
+  6. Chi Router Route Conflict Risk (Phase 2, Task 6)
+
+  The plan registers the WhatsApp endpoint outside the reimbursement route
+  group:
+
+  r.Route("/accounting/reimbursements", reimbursementHandler.RegisterRoutes)
+  r.Post("/accounting/reimbursements/from-whatsapp",
+  whatsappHandler.FromWhatsApp)
+
+  With Chi, r.Route() creates a sub-router that captures all paths under that
+  prefix. The sub-router's PUT /{id} where id=from-whatsapp could conflict. Chi
+  should resolve this by method matching (PUT vs POST), but it's fragile.
+
+  Safer approach: Register the WhatsApp endpoint inside the reimbursement
+  handler's RegisterRoutes:
+  func (h *ReimbursementHandler) RegisterRoutes(r chi.Router) {
+      r.Get("/", h.List)
+      r.Post("/", h.Create)
+      r.Put("/{id}", h.Update)
+      r.Get("/counts", h.StatusCounts)
+      r.Post("/post-batch", h.PostBatch)
+      r.Post("/from-whatsapp", whatsappHandler.FromWhatsApp)  // ← here
+  }
+  Or use a separate path like POST /accounting/whatsapp/reimbursement.
+
+  ---
+  MINOR Issues (Worth Noting)
+
+  7. WhatsApp Endpoint Auth Context
+
+  The WhatsApp endpoint (POST /accounting/reimbursements/from-whatsapp) is
+  inside the OWNER-only auth group. But it's called by n8n (automated system),
+  not the owner directly. n8n would need an OWNER-level JWT.
+
+  Question for plan: Does n8n use a service account with OWNER role? Or should
+  this endpoint have different auth (API key, webhook secret)? The plan should
+  document the intended auth strategy.
+
+  8. Missing posted_at on AcctSalesDailySummary Model
+
+  The current AcctSalesDailySummary model (confirmed in models.go:98-109) does
+  not have PostedAt. Phase 4 Task 1 correctly adds it via migration. However,
+  Phase 4 Task 2's mock store references s.PostedAt before the migration runs.
+  This is fine during implementation (sqlc regenerates after migration), but the
+   plan should make clear that Task 1 must complete (including sqlc generate)
+  before Task 2's tests can compile.
+
+  9. Missing Imports in Plan Code Blocks
+
+  Several Phase plan code blocks are missing imports that would cause
+  compilation failures:
+  - Phase 3 report.go: Missing "fmt" import (noted in text but not in code
+  block)
+  - Phase 4 sales_test.go: Missing "fmt" and pgx imports
+  - Phase 2 whatsapp_test.go: Missing "fmt" import (noted in text)
+
+  These are minor — the implementing engineer would fix them — but complete code
+   blocks would be better.
+
+  ---
+  Sidebar Navigation Progression (Verified Correct)
+  ┌───────────┬───────────────────────────┬──────────────────────┐
+  │   Phase   │           Items           │ Matches Design Doc?  │
+  ├───────────┼───────────────────────────┼──────────────────────┤
+  │ P1 (done) │ Pembelian, Master Data    │ Yes (2/8)            │
+  ├───────────┼───────────────────────────┼──────────────────────┤
+  │ P2        │ + Reimburse               │ Yes (3/8)            │
+  ├───────────┼───────────────────────────┼──────────────────────┤
+  │ P3        │ + Ringkasan, Laporan      │ Yes (5/8)            │
+  ├───────────┼───────────────────────────┼──────────────────────┤
+  │ P4        │ + Penjualan, Gaji, Jurnal │ Yes (8/8 — complete) │
+  └───────────┴───────────────────────────┴──────────────────────┘
+  Final Phase 4 sidebar matches the design doc navigation exactly:
+  Ringkasan → Pembelian → Penjualan → Reimburse → Gaji → Jurnal → Laporan →
+  Master Data
+
+  ---
+  Data Model Alignment (Verified Correct)
+
+  All 7 acct_* tables from the design doc are created in Phase 1's migration.
+  The sqlc models match. Phase 4's migration correctly adds only the posted_at
+  column to acct_sales_daily_summaries.
+
+  ---
+  Summary
+  Severity: CRITICAL
+  Count: 2
+  Issues: Transaction code collision, sales batch without DB tx
+  ────────────────────────────────────────
+  Severity: IMPORTANT
+  Count: 4
+  Issues: Duplicate functions (x2), missing search filter, route conflict
+  ────────────────────────────────────────
+  Severity: MINOR
+  Count: 3
+  Issues: WhatsApp auth, model dependency, missing imports
+  The plans are complete in scope — every feature from the design doc is
+  covered, the phasing is logical, and the GSheet retirement happens
+  incrementally as designed. The critical issues are both fixable with small
+  changes to the plans before execution.
+
+  ★ Insight ─────────────────────────────────────
+  - The transaction code collision is a classic example of why "global sequence"
+   patterns fail when you introduce multiple prefixes. Each prefix needs its own
+   filtered MAX query. This is easy to miss when phases are planned
+  independently.
+  - The DB transaction omission in sales batch posting shows why it's important
+  to cross-reference patterns across phases. Phase 2 got it right with
+  pool.Begin(), but Phase 4 forgot to apply the same pattern.
+  - DRY violations across phases are expected when plans are written as
+  standalone documents. The fix is a shared helpers file introduced early (Phase
+   2) and referenced by later phases.
+  ─────────────────────────────────────────────────
+
+  Shall I update the three plan files to fix these issues, or would you prefer a
+   different approach?
+
+✻ Sautéed for 6m 57s
+
+❯ yes use /writing-plans skill for consistency. all of that created with    
+  that skill                                                                
+
+⏺ I'm using the writing-plans skill to update all three plan files with the
+  fixes identified in the review.
+
+  Let me make the edits systematically, starting with the most critical issues
+  and working through all three files.
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ Good. Now let me make all the Phase 2 edits.
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase2-plan.md)
+  ⎿  Added 31 lines, removed 4 lines
+       99  SELECT * FROM acct_accounts WHERE account_code = $1 AND is_act
+           ive = true;
+      100  ```
+      101  
+      102 -**Step 3: Regenerate sqlc**                                   
+      102 +**Step 3: Add prefix-specific purchase code query**           
+      103  
+      104 +Append to `api/queries/acct_cash_transactions.sql`:           
+      105 +                                                              
+      106 +```sql                                                        
+      107 +-- Prefix-specific transaction code sequence for purchases (PC
+          +S)                                                            
+      108 +-- CRITICAL: The existing GetNextTransactionCode uses global M
+          +AX which breaks                                               
+      109 +-- when other prefixes (SLS/PYR/JNL) are introduced in Phase 4
+          +.                                                             
+      110 +-- Always use this prefix-specific query for PCS code generati
+          +on.                                                           
+      111 +-- name: GetNextPurchaseCode :one                             
+      112 +SELECT COALESCE(MAX(transaction_code), 'PCS000000')::text AS m
+          +ax_code                                                       
+      113 +FROM acct_cash_transactions                                   
+      114 +WHERE transaction_code LIKE 'PCS%';                           
+      115 +```                                                           
+      116 +                                                              
+      117 +**Note:** Also update `api/internal/accounting/handler/purchas
+          +e.go` to use `GetNextPurchaseCode` instead of `GetNextTransact
+          +ionCode`. Update the `PurchaseStore` interface accordingly:   
+      118 +                                                              
+      119 +```go                                                         
+      120 +type PurchaseStore interface {                                
+      121 +  CreateAcctCashTransaction(ctx context.Context, arg database.
+          +CreateAcctCashTransactionParams) (database.AcctCashTransaction
+          +, error)                                                      
+      122 +  GetNextPurchaseCode(ctx context.Context) (string, error) // 
+          +Changed from GetNextTransactionCode                           
+      123 +  UpdateAcctItemLastPrice(ctx context.Context, arg database.Up
+          +dateAcctItemLastPriceParams) error                            
+      124 +}                                                             
+      125 +```                                                           
+      126 +                                                              
+      127 +And in `CreatePurchase`, change `h.store.GetNextTransactionCod
+          +e(r.Context())` → `h.store.GetNextPurchaseCode(r.Context())`. 
+      128 +                                                              
+      129 +**Step 4: Regenerate sqlc**                                   
+      130 +                                                              
+      131  Run: `cd api && export PATH=$PATH:~/go/bin && sqlc generate`
+      132  
+      133  Expected: No errors. New query functions in `api/internal/data
+           base/`.
+      134  
+      108 -**Step 4: Commit**                                            
+      135 +**Step 5: Commit**                                            
+      136  
+      137  ```bash
+      111 -git add api/queries/acct_reimbursement_requests.sql api/querie
+          -s/acct_accounts.sql api/internal/database/                    
+      112 -git commit -m "feat(accounting): add sqlc queries for reimburs
+          -ements and account lookup by code"                            
+      138 +git add api/queries/acct_reimbursement_requests.sql api/querie
+          +s/acct_accounts.sql api/queries/acct_cash_transactions.sql api
+          +/internal/database/ api/internal/accounting/handler/purchase.g
+          +o                                                             
+      139 +git commit -m "feat(accounting): add sqlc queries for reimburs
+          +ements, account lookup, and prefix-specific PCS code sequence"
+      140  ```
+      141  
+      142  ---
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase2-plan.md)
+  ⎿  Added 3 lines, removed 3 lines
+      1310    }
+      1311    batchID := fmt.Sprintf("REIMB-%s-%03d", paymentDate.Format(
+            "20060102"), batchCount+1)
+      1312  
+      1313 -  // Get next transaction code                               
+      1314 -  maxCode, err := qtx.GetNextTransactionCode(r.Context())    
+      1313 +  // Get next PCS transaction code (prefix-specific to avoid 
+           +collision with SLS/PYR/JNL)                                  
+      1314 +  maxCode, err := qtx.GetNextPurchaseCode(r.Context())       
+      1315    if err != nil {
+      1316 -    log.Printf("ERROR: get next tx code: %v", err)           
+      1316 +    log.Printf("ERROR: get next purchase code: %v", err)     
+      1317      writeJSON(w, http.StatusInternalServerError, map[string]s
+            tring{"error": "internal server error"})
+      1318      return
+      1319    }
+
+⏺ Now fix the Phase 2 Task 3 — add shared helper note and fix numericToString as
+   canonical:
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase2-plan.md)
+  ⎿  Added 3 lines
+      907  }
+      908  
+      909  // numericToString converts pgtype.Numeric to string with 2 de
+           cimal places.
+      910 +// CANONICAL: This is THE numeric-to-string helper for all acc
+          +ounting handlers.                                             
+      911 +// Phases 3 and 4 should reuse this function (same package, al
+          +ready accessible).                                            
+      912 +// Do NOT create duplicates like numericToDecimalString — use 
+          +this one.                                                     
+      913  func numericToString(n pgtype.Numeric) string {
+      914    if !n.Valid {
+      915      return "0.00"
+
+⏺ Now fix the Phase 2 Task 5 — add missing fmt import in whatsapp_test.go:
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase2-plan.md)
+  ⎿  Added 1 line
+      1467  
+      1468  import (
+      1469    "context"
+      1470 +  "fmt"                                                      
+      1471    "net/http"
+      1472    "testing"
+      1473  
+
+⏺ Now remove the outdated note about the missing import:
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase2-plan.md)
+  ⎿  Removed 2 lines
+      1588  }
+      1589  ```
+      1590  
+      1591 -**Note:** Add `import "fmt"` to the test file's imports since
+           - `mockWhatsAppStore.GetAcctAccountByCode` uses `fmt.Errorf`. 
+      1592 -                                                             
+      1591  **Step 2: Write WhatsApp handler**
+      1592  
+      1593  Create `api/internal/accounting/handler/whatsapp.go`:
+
+⏺ Now fix Phase 2 Task 6 — route registration and auth note:
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase2-plan.md)
+  ⎿  Added 10 lines, removed 7 lines
+      1894  In `api/internal/router/router.go`, inside the existing accou
+            nting `r.Group` block (after purchase routes), add:
+      1895  
+      1896  ```go
+      1897 -// Reimbursements                                            
+      1898 -reimbursementHandler := accthandler.NewReimbursementHandler(q
+           -ueries, pool)                                                
+      1899 -r.Route("/accounting/reimbursements", reimbursementHandler.Re
+           -gisterRoutes)                                                
+      1900 -                                                             
+      1901 -// WhatsApp endpoint                                         
+      1897 +// Reimbursements + WhatsApp                                 
+      1898  whatsappHandler := accthandler.NewWhatsAppHandler(queries)
+      1903 -r.Post("/accounting/reimbursements/from-whatsapp", whatsappHa
+           -ndler.FromWhatsApp)                                          
+      1899 +reimbursementHandler := accthandler.NewReimbursementHandler(q
+           +ueries, pool)                                                
+      1900 +r.Route("/accounting/reimbursements", func(r chi.Router) {   
+      1901 +  reimbursementHandler.RegisterRoutes(r)                     
+      1902 +  // WhatsApp endpoint registered INSIDE the route group.    
+      1903 +  // Chi matches literal paths ("/from-whatsapp") before wild
+           +cards ("/{id}"),                                             
+      1904 +  // so this won't conflict with PUT /{id}.                  
+      1905 +  r.Post("/from-whatsapp", whatsappHandler.FromWhatsApp)     
+      1906 +})                                                           
+      1907  ```
+      1908  
+      1906 -**Note:** The WhatsApp endpoint is registered OUTSIDE the rei
+           -mbursement route group because `from-whatsapp` would conflict
+           - with the `/{id}` pattern. Register it as a standalone POST o
+           -n the accounting group.                                      
+      1909 +**Note on WhatsApp endpoint auth:** This endpoint is inside t
+           +he OWNER-only auth group. n8n (the automation that calls this
+           +) must use a JWT token from a user with OWNER role (e.g., a s
+           +ervice account). If you prefer webhook-style auth (API key), 
+           +add a separate middleware or move this endpoint outside the a
+           +uth group with its own key validation. For now, n8n using the
+           + owner's JWT is the simplest approach.                       
+      1910  
+      1911  **Step 2: Add types to api.ts**
+      1912  
+
+⏺ Phase 2 done. Now let me fix Phase 3.
+
+⏺ Read 1 file (ctrl+o to expand)
+  ⎿  Found 75 new diagnostic issues in 1 file (ctrl+o to expand)
+
+⏺ Fix Phase 3 Task 2 — add "fmt" to report.go imports:
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase3-plan.md)
+  ⎿  Added 1 line
+      315  
+      316  import (
+      317    "context"
+      318 +  "fmt"                                                       
+      319    "log"
+      320    "net/http"
+      321    "time"
+
+⏺ Remove the outdated note about adding fmt:
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase3-plan.md)
+  ⎿  Added 1 line, removed 1 line
+      557  }
+      558  ```
+      559  
+      560 -**Note:** Add `"fmt"` to the imports for `parseReportFilters`.
+          - The `uuidToPgUUID` and `writeJSON` helpers are already define
+          -d in `master.go` / `purchase.go` from Phase 1.                
+      560 +**Note:** The `uuidToPgUUID` and `writeJSON` helpers are alrea
+          +dy defined in `master.go` / `purchase.go` from Phase 1. The `n
+          +umericToString` helper is defined in `reimbursement.go` from P
+          +hase 2.                                                       
+      561  
+      562  **Step 4: Run tests to verify they pass**
+      563  
+
+⏺ Now fix Phase 3 Task 3 — export TransactionResponse for reuse:
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase3-plan.md)
+  ⎿  Added 5 lines, removed 3 lines
+      754    RecentTransactions    []transactionResponse  `json:"recent_t
+           ransactions"`
+      755  }
+      756  
+      757 -// transactionResponse is used both here and by the ledger han
+          -dler in Phase 4.                                              
+      758 -// For now, defined inline. Reuse from purchase.go's transacti
+          -onResponse if already exported.                               
+      759 -type transactionResponse struct {                             
+      757 +// FullTransactionResponse is the canonical full-field transac
+          +tion response.                                                
+      758 +// EXPORTED so Phase 4's ledger handler can reuse it instead o
+          +f defining a duplicate.                                       
+      759 +// Note: purchase.go has a slimmer `transactionResponse` (9 fi
+          +elds, purchase-specific).                                     
+      760 +// This one has 13 fields (includes cash_account_id, outlet_id
+          +, reimbursement_batch_id).                                    
+      761 +type FullTransactionResponse struct {                         
+      762    ID                   string  `json:"id"`
+      763    TransactionCode      string  `json:"transaction_code"`
+      764    TransactionDate      string  `json:"transaction_date"`
+
+⏺ Now update all references to transactionResponse in the dashboard handler to
+  use the exported name:
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase3-plan.md)
+  ⎿  Added 2 lines, removed 2 lines
+      775    CreatedAt            string  `json:"created_at"`
+      776  }
+      777  
+      778 -func toTransactionResponse(tx database.AcctCashTransaction) tr
+          -ansactionResponse {                                           
+      779 -  resp := transactionResponse{                                
+      778 +func ToFullTransactionResponse(tx database.AcctCashTransaction
+          +) FullTransactionResponse {                                   
+      779 +  resp := FullTransactionResponse{                            
+      780      ID:              tx.ID.String(),
+      781      TransactionCode: tx.TransactionCode,
+      782      TransactionDate: tx.TransactionDate.Time.Format("2006-01-0
+           2"),
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase3-plan.md)
+  ⎿  Added 1 line, removed 1 line
+      751    CashBalances          []cashBalanceItem     `json:"cash_bala
+           nces"`
+      752    CurrentMonthPnl       *miniPnl              `json:"current_m
+           onth_pnl"`
+      753    PendingReimbursements pendingReimbursements  `json:"pending_
+           reimbursements"`
+      754 -  RecentTransactions    []transactionResponse  `json:"recent_t
+          -ransactions"`                                                 
+      754 +  RecentTransactions    []FullTransactionResponse  `json:"rece
+          +nt_transactions"`                                             
+      755  }
+      756  
+      757  // FullTransactionResponse is the canonical full-field transac
+           tion response.
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase3-plan.md)
+  ⎿  Added 2 lines, removed 2 lines
+      889      return
+      890    }
+      891  
+      892 -  txResp := make([]transactionResponse, len(recentTx))        
+      892 +  txResp := make([]FullTransactionResponse, len(recentTx))    
+      893    for i, tx := range recentTx {
+      894 -    txResp[i] = toTransactionResponse(tx)                     
+      894 +    txResp[i] = ToFullTransactionResponse(tx)                 
+      895    }
+      896  
+      897    writeJSON(w, http.StatusOK, dashboardResponse{
+
+⏺ Update the note at the bottom about deduplication:
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase3-plan.md)
+  ⎿  Added 1 line, removed 1 line
+      906  }
+      907  ```
+      908  
+      909 -**Note:** If `transactionResponse` and `toTransactionResponse`
+          - already exist in `purchase.go` (from Phase 1), check if they'
+          -re exported. If they're unexported (`transactionResponse` lowe
+          -rcase), either export them or keep the duplicate here. The imp
+          -lementing engineer should check and deduplicate if needed.    
+      909 +**Note:** Phase 1's `purchase.go` has a slimmer `transactionRe
+          +sponse` (9 fields, purchase-specific — no cash_account_id, out
+          +let_id, reimbursement_batch_id). This dashboard handler define
+          +s `FullTransactionResponse` (13 fields, exported) as the canon
+          +ical full-field version. Phase 4's ledger handler should reuse
+          + `FullTransactionResponse` and `ToFullTransactionResponse` ins
+          +tead of defining a duplicate.                                 
+      910  
+      911  **Step 4: Run tests to verify they pass**
+      912  
+
+⏺ Phase 3 done. Now the big one — Phase 4. Let me fix all issues there.
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ Add search filter to count query and note about updating List query + remove
+  stale GetNextTransactionCode:
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase4-plan.md)
+  ⎿  Added 3 lines, removed 2 lines
+      197  FROM acct_cash_transactions
+      198  WHERE transaction_code LIKE 'JNL%';
+      199  
+      200 --- Pagination count (same filters as ListAcctCashTransactions)
+      200 +-- Pagination count (same filters as ListAcctCashTransactions 
+          ++ search)                                                     
+      201  -- name: CountAcctCashTransactions :one
+      202  SELECT COUNT(*)::int AS total
+      203  FROM acct_cash_transactions
+     ...
+      207      (sqlc.narg('line_type')::text IS NULL OR line_type = sqlc.
+           narg('line_type')) AND
+      208      (sqlc.narg('account_id')::uuid IS NULL OR account_id = sql
+           c.narg('account_id')) AND
+      209      (sqlc.narg('cash_account_id')::uuid IS NULL OR cash_accoun
+           t_id = sqlc.narg('cash_account_id')) AND
+      210 -    (sqlc.narg('outlet_id')::uuid IS NULL OR outlet_id = sqlc.
+          -narg('outlet_id'));                                           
+      210 +    (sqlc.narg('outlet_id')::uuid IS NULL OR outlet_id = sqlc.
+          +narg('outlet_id')) AND                                        
+      211 +    (sqlc.narg('search')::text IS NULL OR description ILIKE '%
+          +' || sqlc.narg('search') || '%');                             
+      212  ```
+      213  
+      214  **Step 5: Run migration + regenerate sqlc**
+
+⏺ Now add the search filter to ListAcctCashTransactions and note about removing
+  GetNextTransactionCode. Read the area after the count query to find the right
+  place for the note:
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase4-plan.md)
+  ⎿  Added 14 lines, removed 1 line
+      211      (sqlc.narg('search')::text IS NULL OR description ILIKE '%
+           ' || sqlc.narg('search') || '%');
+      212  ```
+      213  
+      214 -**Step 5: Run migration + regenerate sqlc**                   
+      214 +**Step 5: Update ListAcctCashTransactions with search filter**
+      215  
+      216 +In `api/queries/acct_cash_transactions.sql`, add search filter
+          + to `ListAcctCashTransactions` (design doc requires text searc
+          +h on Jurnal page):                                            
+      217 +                                                              
+      218 +```sql                                                        
+      219 +-- Add this line before the ORDER BY in ListAcctCashTransactio
+          +ns:                                                           
+      220 +    (sqlc.narg('search')::text IS NULL OR description ILIKE '%
+          +' || sqlc.narg('search') || '%')                              
+      221 +```                                                           
+      222 +                                                              
+      223 +**Step 5b: Clean up stale GetNextTransactionCode**            
+      224 +                                                              
+      225 +Remove or comment out the old `GetNextTransactionCode` query (
+          +global MAX without prefix filter). It was used by Phase 1's pu
+          +rchase handler and Phase 2's reimbursement batch posting, both
+          + of which should now use `GetNextPurchaseCode` (added in Phase
+          + 2 Task 1). Leaving the global query invites accidental misuse
+          +.                                                             
+      226 +                                                              
+      227 +**Step 6: Run migration + regenerate sqlc**                   
+      228 +                                                              
+      229  ```bash
+      230  cd api && export PATH=$PATH:~/go/bin && migrate -path migratio
+           ns/ -database "$DATABASE_URL" up
+      231  cd api && export PATH=$PATH:~/go/bin && sqlc generate
+
+⏺ Now fix Phase 4 Task 2 — add pool to SalesHandler and use DB transaction in
+  PostSales. Also fix numericToDecimalString duplication:
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase4-plan.md)
+  ⎿  Added 4 lines, removed 2 lines
+      435    "github.com/google/uuid"
+      436    "github.com/jackc/pgx/v5"
+      437    "github.com/jackc/pgx/v5/pgtype"
+      438 +  "github.com/jackc/pgx/v5/pgxpool"                           
+      439    "github.com/kiwari-pos/api/internal/database"
+      440    "github.com/shopspring/decimal"
+      441  )
+     ...
+      458  
+      459  type SalesHandler struct {
+      460    store SalesStore
+      461 +  pool  *pgxpool.Pool // for batch posting transaction (same p
+          +attern as ReimbursementHandler)                               
+      462  }
+      463  
+      462 -func NewSalesHandler(store SalesStore) *SalesHandler {        
+      463 -  return &SalesHandler{store: store}                          
+      464 +func NewSalesHandler(store SalesStore, pool *pgxpool.Pool) *Sa
+          +lesHandler {                                                  
+      465 +  return &SalesHandler{store: store, pool: pool}              
+      466  }
+      467  
+      468  func (h *SalesHandler) RegisterRoutes(r chi.Router) {
+
+⏺ Now replace the numericToDecimalString function with a note to reuse
+  numericToString:
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase4-plan.md)
+  ⎿  Added 3 lines, removed 13 lines
+      537    return resp
+      538  }
+      539  
+      540 -// numericToDecimalString converts pgtype.Numeric to "12345.00
+          -" string.                                                     
+      541 -// Uses shopspring/decimal: .Value() → decimal.NewFromString()
+          - → .StringFixed(2)                                            
+      542 -func numericToDecimalString(n pgtype.Numeric) string {        
+      543 -  val, err := n.Value()                                       
+      544 -  if err != nil || val == nil {                               
+      545 -    return "0.00"                                             
+      546 -  }                                                           
+      547 -  d, err := decimal.NewFromString(fmt.Sprintf("%v", val))     
+      548 -  if err != nil {                                             
+      549 -    return "0.00"                                             
+      550 -  }                                                           
+      551 -  return d.StringFixed(2)                                     
+      552 -}                                                             
+      540 +// NOTE: Reuse numericToString() from reimbursement.go (Phase 
+          +2).                                                           
+      541 +// It's the canonical Numeric→string helper. Do NOT create a d
+          +uplicate.                                                     
+      542 +// All handlers in this package can call numericToString() dir
+          +ectly.                                                        
+      543  
+      544  // --- Handlers ---
+      545  
+
+⏺ Now update all references to numericToDecimalString in the Phase 4 plan:
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase4-plan.md)
+  ⎿  Added 7 lines, removed 7 lines
+      519      SalesDate:      s.SalesDate.Time.Format("2006-01-02"),
+      520      Channel:        s.Channel,
+      521      PaymentMethod:  s.PaymentMethod,
+      522 -    GrossSales:     numericToDecimalString(s.GrossSales),     
+      523 -    DiscountAmount: numericToDecimalString(s.DiscountAmount), 
+      524 -    NetSales:       numericToDecimalString(s.NetSales),       
+      522 +    GrossSales:     numericToString(s.GrossSales),            
+      523 +    DiscountAmount: numericToString(s.DiscountAmount),        
+      524 +    NetSales:       numericToString(s.NetSales),              
+      525      CashAccountID:  s.CashAccountID.String(),
+      526      Source:         s.Source,
+      527      CreatedAt:      s.CreatedAt.Format(time.RFC3339),
+     ...
+      970      PayrollDate:   p.PayrollDate.Time.Format("2006-01-02"),
+      971      PeriodType:    p.PeriodType,
+      972      EmployeeName:  p.EmployeeName,
+      973 -    GrossPay:      numericToDecimalString(p.GrossPay),        
+      973 +    GrossPay:      numericToString(p.GrossPay),               
+      974      PaymentMethod: p.PaymentMethod,
+      975      CashAccountID: p.CashAccountID.String(),
+      976      CreatedAt:     p.CreatedAt.Format(time.RFC3339),
+     ...
+      1301      TransactionCode: tx.TransactionCode,
+      1302      TransactionDate: tx.TransactionDate.Time.Format("2006-01-
+            02"),
+      1303      Description:     tx.Description,
+      1304 -    Quantity:        numericToDecimalString(tx.Quantity),    
+      1305 -    UnitPrice:       numericToDecimalString(tx.UnitPrice),   
+      1306 -    Amount:          numericToDecimalString(tx.Amount),      
+      1304 +    Quantity:        numericToString(tx.Quantity),           
+      1305 +    UnitPrice:       numericToString(tx.UnitPrice),          
+      1306 +    Amount:          numericToString(tx.Amount),             
+      1307      LineType:        tx.LineType,
+      1308      AccountID:       tx.AccountID.String(),
+      1309      CreatedAt:       tx.CreatedAt.Format(time.RFC3339),
+
+⏺ Now fix the PostSales handler to use DB transaction. Let me find it:
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase4-plan.md)
+  ⎿  Added 28 lines, removed 4 lines
+      777      return
+      778    }
+      779  
+      780 +  if h.pool == nil {                                          
+      781 +    log.Printf("ERROR: pool is nil for sales posting")        
+      782 +    writeJSON(w, http.StatusInternalServerError, map[string]st
+          +ring{"error": "internal server error"})                       
+      783 +    return                                                    
+      784 +  }                                                           
+      785 +                                                              
+      786 +  // Begin DB transaction (same pattern as reimbursement batch
+          + posting in Phase 2)                                          
+      787 +  tx, err := h.pool.Begin(r.Context())                        
+      788 +  if err != nil {                                             
+      789 +    log.Printf("ERROR: begin tx: %v", err)                    
+      790 +    writeJSON(w, http.StatusInternalServerError, map[string]st
+          +ring{"error": "internal server error"})                       
+      791 +    return                                                    
+      792 +  }                                                           
+      793 +  defer tx.Rollback(r.Context())                              
+      794 +                                                              
+      795 +  qtx := database.New(tx)                                     
+      796 +                                                              
+      797    // Get next SLS code
+      781 -  maxCode, err := h.store.GetNextSalesCode(r.Context())       
+      798 +  maxCode, err := qtx.GetNextSalesCode(r.Context())           
+      799    if err != nil {
+      800      log.Printf("ERROR: get next sales code: %v", err)
+      801      writeJSON(w, http.StatusInternalServerError, map[string]st
+           ring{"error": "internal server error"})
+     ...
+      813        continue
+      814      }
+      815  
+      799 -    s, err := h.store.GetAcctSalesDailySummary(r.Context(), id
+          -)                                                             
+      816 +    s, err := qtx.GetAcctSalesDailySummary(r.Context(), id)   
+      817      if err != nil {
+      818        continue
+      819      }
+     ...
+      829  
+      830      desc := fmt.Sprintf("Sales %s %s %s", s.Channel, s.Payment
+           Method, s.SalesDate.Time.Format("2006-01-02"))
+      831  
+      815 -    _, err = h.store.CreateAcctCashTransaction(r.Context(), da
+          -tabase.CreateAcctCashTransactionParams{                       
+      832 +    _, err = qtx.CreateAcctCashTransaction(r.Context(), databa
+          +se.CreateAcctCashTransactionParams{                           
+      833        TransactionCode: code,
+      834        TransactionDate: s.SalesDate,
+      835        Description:     desc,
+     ...
+      847        return
+      848      }
+      849  
+      833 -    h.store.UpdateSalesSummaryPosted(r.Context(), id)         
+      850 +    qtx.UpdateSalesSummaryPosted(r.Context(), id)             
+      851      posted++
+      852    }
+      853  
+      854 +  // Commit transaction                                       
+      855 +  if err := tx.Commit(r.Context()); err != nil {              
+      856 +    log.Printf("ERROR: commit sales posting: %v", err)        
+      857 +    writeJSON(w, http.StatusInternalServerError, map[string]st
+          +ring{"error": "internal server error"})                       
+      858 +    return                                                    
+      859 +  }                                                           
+      860 +                                                              
+      861    writeJSON(w, http.StatusOK, map[string]interface{}{
+      862      "posted":  posted,
+      863      "skipped": skipped,
+
+⏺ Now update the test mock and router setup to match the new constructor:
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase4-plan.md)
+  ⎿  Added 1 line, removed 1 line
+      360  }
+      361  
+      362  func setupSalesRouter(store handler.SalesStore) *chi.Mux {
+      363 -  h := handler.NewSalesHandler(store)                         
+      363 +  h := handler.NewSalesHandler(store, nil) // nil pool for non
+          +-batch tests                                                  
+      364    r := chi.NewRouter()
+      365    r.Route("/accounting/sales", h.RegisterRoutes)
+      366    return r
+
+⏺ Fix missing imports in sales_test.go:
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase4-plan.md)
+  ⎿  Added 2 lines
+      257  
+      258  import (
+      259    "context"
+      260 +  "fmt"                                                       
+      261    "net/http"
+      262    "testing"
+      263    "time"
+      264  
+      265    "github.com/go-chi/chi/v5"
+      266    "github.com/google/uuid"
+      267 +  "github.com/jackc/pgx/v5"                                   
+      268    "github.com/jackc/pgx/v5/pgtype"
+      269    "github.com/kiwari-pos/api/internal/accounting/handler"
+      270    "github.com/kiwari-pos/api/internal/database"
+
+⏺ Now fix Phase 4 Task 4 — reuse FullTransactionResponse from Phase 3 instead of
+   defining ledgerTransactionResponse:
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase4-plan.md)
+  ⎿  Added 11 lines, removed 18 lines
+      1303    ItemID          *string `json:"item_id"`
+      1304  }
+      1305  
+      1306 -// ledgerTransactionResponse is a full transaction with all f
+           -ields.                                                       
+      1307 -type ledgerTransactionResponse struct {                      
+      1308 -  ID                   string  `json:"id"`                   
+      1309 -  TransactionCode      string  `json:"transaction_code"`     
+      1310 -  TransactionDate      string  `json:"transaction_date"`     
+      1311 -  ItemID               *string `json:"item_id"`              
+      1312 -  Description          string  `json:"description"`          
+      1313 -  Quantity             string  `json:"quantity"`             
+      1314 -  UnitPrice            string  `json:"unit_price"`           
+      1315 -  Amount               string  `json:"amount"`               
+      1316 -  LineType             string  `json:"line_type"`            
+      1317 -  AccountID            string  `json:"account_id"`           
+      1318 -  CashAccountID        *string `json:"cash_account_id"`      
+      1319 -  OutletID             *string `json:"outlet_id"`            
+      1320 -  ReimbursementBatchID *string `json:"reimbursement_batch_id"
+           -`                                                            
+      1321 -  CreatedAt            string  `json:"created_at"`           
+      1306 +// NOTE: Reuse FullTransactionResponse and ToFullTransactionR
+           +esponse from                                                 
+      1307 +// dashboard.go (Phase 3). They are exported specifically for
+           + this purpose.                                               
+      1308 +// Do NOT define a duplicate ledgerTransactionResponse type. 
+      1309 +                                                             
+      1310 +// toLedgerResponse wraps the canonical converter for readabi
+           +lity in this file.                                           
+      1311 +func toLedgerResponse(tx database.AcctCashTransaction) FullTr
+           +ansactionResponse {                                          
+      1312 +  return ToFullTransactionResponse(tx)                       
+      1313  }
+      1314  
+      1324 -func toLedgerResponse(tx database.AcctCashTransaction) ledger
+           -TransactionResponse {                                        
+      1325 -  resp := ledgerTransactionResponse{                         
+      1315 +// Keeping the original response building inline for referenc
+           +e during implementation,                                     
+      1316 +// but the actual code should just call ToFullTransactionResp
+           +onse():                                                      
+      1317 +func _unused_reference(tx database.AcctCashTransaction) FullT
+           +ransactionResponse {                                         
+      1318 +  resp := FullTransactionResponse{                           
+      1319      ID:              tx.ID.String(),
+      1320      TransactionCode: tx.TransactionCode,
+      1321      TransactionDate: tx.TransactionDate.Time.Format("2006-01-
+            02"),
+
+⏺ Hmm, that approach is messy. Let me do a cleaner replacement:
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase4-plan.md)
+  ⎿  Added 4 lines, removed 43 lines
+      1303    ItemID          *string `json:"item_id"`
+      1304  }
+      1305  
+      1306 -// NOTE: Reuse FullTransactionResponse and ToFullTransactionR
+           -esponse from                                                 
+      1307 -// dashboard.go (Phase 3). They are exported specifically for
+           - this purpose.                                               
+      1308 -// Do NOT define a duplicate ledgerTransactionResponse type. 
+      1306 +// REUSE: FullTransactionResponse and ToFullTransactionRespon
+           +se from dashboard.go (Phase 3).                              
+      1307 +// They are exported specifically for this purpose. Do NOT de
+           +fine a duplicate type.                                       
+      1308  
+      1310 -// toLedgerResponse wraps the canonical converter for readabi
+           -lity in this file.                                           
+      1311 -func toLedgerResponse(tx database.AcctCashTransaction) FullTr
+           -ansactionResponse {                                          
+      1312 -  return ToFullTransactionResponse(tx)                       
+      1313 -}                                                            
+      1314 -                                                             
+      1315 -// Keeping the original response building inline for referenc
+           -e during implementation,                                     
+      1316 -// but the actual code should just call ToFullTransactionResp
+           -onse():                                                      
+      1317 -func _unused_reference(tx database.AcctCashTransaction) FullT
+           -ransactionResponse {                                         
+      1318 -  resp := FullTransactionResponse{                           
+      1319 -    ID:              tx.ID.String(),                         
+      1320 -    TransactionCode: tx.TransactionCode,                     
+      1321 -    TransactionDate: tx.TransactionDate.Time.Format("2006-01-
+           -02"),                                                        
+      1322 -    Description:     tx.Description,                         
+      1323 -    Quantity:        numericToString(tx.Quantity),           
+      1324 -    UnitPrice:       numericToString(tx.UnitPrice),          
+      1325 -    Amount:          numericToString(tx.Amount),             
+      1326 -    LineType:        tx.LineType,                            
+      1327 -    AccountID:       tx.AccountID.String(),                  
+      1328 -    CreatedAt:       tx.CreatedAt.Format(time.RFC3339),      
+      1329 -  }                                                          
+      1330 -  if tx.ItemID.Valid {                                       
+      1331 -    s := uuid.UUID(tx.ItemID.Bytes).String()                 
+      1332 -    resp.ItemID = &s                                         
+      1333 -  }                                                          
+      1334 -  if tx.CashAccountID.Valid {                                
+      1335 -    s := uuid.UUID(tx.CashAccountID.Bytes).String()          
+      1336 -    resp.CashAccountID = &s                                  
+      1337 -  }                                                          
+      1338 -  if tx.OutletID.Valid {                                     
+      1339 -    s := uuid.UUID(tx.OutletID.Bytes).String()               
+      1340 -    resp.OutletID = &s                                       
+      1341 -  }                                                          
+      1342 -  if tx.ReimbursementBatchID.Valid {                         
+      1343 -    resp.ReimbursementBatchID = &tx.ReimbursementBatchID.Stri
+           -ng                                                           
+      1344 -  }                                                          
+      1345 -  return resp                                                
+      1346 -}                                                            
+      1347 -                                                             
+      1309  type ledgerListResponse struct {
+      1349 -  Transactions []ledgerTransactionResponse `json:"transaction
+           -s"`                                                          
+      1350 -  Total        int32                       `json:"total"`    
+      1310 +  Transactions []FullTransactionResponse `json:"transactions"
+           +`                                                            
+      1311 +  Total        int32                     `json:"total"`      
+      1312  }
+      1313  
+      1314  // --- Handlers ---
+
+⏺ Now update all remaining references to toLedgerResponse and
+  ledgerTransactionResponse in the ledger handler code:
+
+⏺ Searched for 1 pattern (ctrl+o to expand)
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase4-plan.md)
+  ⎿  Added 2 lines, removed 2 lines
+      1382  
+      1383    txResp := make([]ledgerTransactionResponse, len(rows))
+      1384    for i, tx := range rows {
+      1385 -    txResp[i] = toLedgerResponse(tx)                         
+      1385 +    txResp[i] = ToFullTransactionResponse(tx)                
+      1386    }
+      1387  
+      1388    writeJSON(w, http.StatusOK, ledgerListResponse{
+     ...
+      1481      return
+      1482    }
+      1483  
+      1484 -  writeJSON(w, http.StatusCreated, toLedgerResponse(tx))     
+      1484 +  writeJSON(w, http.StatusCreated, ToFullTransactionResponse(
+           +tx))                                                         
+      1485  }
+      1486  ```
+      1487  
+
+⏺ Now update the txResp declaration:
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase4-plan.md)
+  ⎿  Added 1 line, removed 1 line
+      1380      return
+      1381    }
+      1382  
+      1383 -  txResp := make([]ledgerTransactionResponse, len(rows))     
+      1383 +  txResp := make([]FullTransactionResponse, len(rows))       
+      1384    for i, tx := range rows {
+      1385      txResp[i] = ToFullTransactionResponse(tx)
+      1386    }
+
+⏺ Now update the Phase 4 Task 5 router wiring to pass pool to SalesHandler:
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase4-plan.md)
+  ⎿  Added 2 lines, removed 2 lines
+      1507  In the existing accounting `r.Group` block (after Phase 3 rou
+            tes), add:
+      1508  
+      1509  ```go
+      1510 -// Sales                                                     
+      1511 -salesHandler := accthandler.NewSalesHandler(queries)         
+      1510 +// Sales (pool needed for batch posting transaction)         
+      1511 +salesHandler := accthandler.NewSalesHandler(queries, pool)   
+      1512  r.Route("/accounting/sales", salesHandler.RegisterRoutes)
+      1513  
+      1514  // Payroll
+
+⏺ Now add the search filter to the ledger handler. Let me find where it parses
+  filter params:
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase4-plan.md)
+  ⎿  Added 7 lines
+      1348      id, _ := uuid.Parse(s)
+      1349      outletID = uuidToPgUUID(id)
+      1350    }
+      1351 +  // Search text filter (design doc: "Filterable: ... search 
+           +text")                                                       
+      1352 +  var search pgtype.Text                                     
+      1353 +  if s := r.URL.Query().Get("search"); s != "" {             
+      1354 +    search = pgtype.Text{String: s, Valid: true}             
+      1355 +  }                                                          
+      1356  
+      1357    // Run list + count queries
+      1358    rows, err := h.store.ListAcctCashTransactions(r.Context(), 
+            database.ListAcctCashTransactionsParams{
+     ...
+      1362      AccountID:     accountID,
+      1363      CashAccountID: cashAccountID,
+      1364      OutletID:      outletID,
+      1365 +    Search:        search,                                   
+      1366      Limit:         int32(limit),
+      1367      Offset:        int32(offset),
+      1368    })
+     ...
+      1379      AccountID:     accountID,
+      1380      CashAccountID: cashAccountID,
+      1381      OutletID:      outletID,
+      1382 +    Search:        search,                                   
+      1383    })
+      1384    if err != nil {
+      1385      log.Printf("ERROR: count transactions: %v", err)
+
+⏺ Now let me also remove the "Note: Add missing imports" at the bottom of the
+  sales test that's now redundant since we fixed the imports:
+
+⏺ Update(docs/plans/2026-02-11-accounting-phase4-plan.md)
+  ⎿  Added 1 line, removed 1 line
+      408  }
+      409  ```
+      410  
+      411 -**Note:** Add missing imports (`fmt`, `pgx`) — the implementin
+          -g engineer should fix compilation. The mock pattern follows `m
+          -aster_test.go` from Phase 1.                                  
+      411 +**Note:** The mock pattern follows `master_test.go` from Phase
+          + 1.                                                           
+      412  
+      413  **Step 2: Run tests to verify they fail**
+      414  
+
+⏺ Now let me verify all edits are consistent by checking for any remaining
+  references to the old types/functions:
+
+⏺ Searched for 3 patterns (ctrl+o to expand)
+
+⏺ All references are clean. The ledgerTransactionResponse is fully removed,
+  numericToDecimalString only appears as a "don't create this" warning, and
+  GetNextTransactionCode only appears in Phase 1 (which is already implemented)
+  and in the Phase 2/4 notes explaining the migration path away from it.
+
+  Let me do a final sanity check on the transactionResponse reference in Phase
+  3:
+
+⏺ Searched for 1 pattern (ctrl+o to expand)
+
+⏺ Clean — only explanatory references remain. Let me verify the Phase 4
+  FullTransactionResponse references are consistent:
+
+⏺ Searched for 1 pattern (ctrl+o to expand)
+
+⏺ All consistent. Now let me do a final review — verify the complete list of
+  changes made:
+
+⏺ Bash(git diff --stat docs/plans/)
+  ⎿  (No output)
+
+⏺ Bash(git diff --stat -- docs/plans/2026-02-11-accounting-phase2-plan.md
+      docs/plans/2026-02-11-accounting-phase3-plan.md
+      docs/plans/2026-02-11-accounting-phase4-plan.…)
+  ⎿  (No output)
+
+⏺ These are untracked files. Let me check them differently:
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ All three files updated. Here's the summary of all changes made:
+
+  ---
+  Changes Applied
+
+  Phase 2 Plan (7 edits)
+  #: 1
+  Issue: Transaction code collision
+  Change: Added GetNextPurchaseCode query (prefix-specific WHERE LIKE 'PCS%') in
+
+    Task 1
+  ────────────────────────────────────────
+  #: 2
+  Issue: Transaction code collision
+  Change: Added instructions to update purchase.go to use GetNextPurchaseCode
+  ────────────────────────────────────────
+  #: 3
+  Issue: Transaction code collision
+  Change: Changed PostBatch to use qtx.GetNextPurchaseCode() instead of
+    GetNextTransactionCode()
+  ────────────────────────────────────────
+  #: 4
+  Issue: Canonical helper
+  Change: Added CANONICAL comment to numericToString so later phases know to
+    reuse it
+  ────────────────────────────────────────
+  #: 5
+  Issue: Missing import
+  Change: Added "fmt" to whatsapp_test.go import block, removed outdated note
+  ────────────────────────────────────────
+  #: 6
+  Issue: Route conflict
+  Change: Changed WhatsApp endpoint to register inside reimbursement route group
+
+    using Chi's literal-before-wildcard matching
+  ────────────────────────────────────────
+  #: 7
+  Issue: Auth clarity
+  Change: Added note explaining n8n auth strategy (uses owner JWT or needs
+    separate auth)
+  Phase 3 Plan (5 edits)
+  #: 1
+  Issue: Missing import
+  Change: Added "fmt" to report.go import block
+  ────────────────────────────────────────
+  #: 2
+  Issue: Import note cleanup
+  Change: Updated note to reference numericToString from Phase 2
+  ────────────────────────────────────────
+  #: 3
+  Issue: DRY: transaction response
+  Change: Renamed transactionResponse → FullTransactionResponse (exported)
+  ────────────────────────────────────────
+  #: 4
+  Issue: DRY: transaction response
+  Change: Renamed toTransactionResponse → ToFullTransactionResponse (exported)
+  ────────────────────────────────────────
+  #: 5
+  Issue: Cross-phase docs
+  Change: Added note explaining the relationship to Phase 1's slimmer type and
+    Phase 4's reuse
+  Phase 4 Plan (10 edits)
+  #: 1
+  Issue: Missing search filter
+  Change: Added search ILIKE filter to CountAcctCashTransactions query
+  ────────────────────────────────────────
+  #: 2
+  Issue: Missing search filter
+  Change: Added instruction to update ListAcctCashTransactions with same search
+    filter
+  ────────────────────────────────────────
+  #: 3
+  Issue: Stale query cleanup
+  Change: Added Step 5b to remove/comment GetNextTransactionCode
+  ────────────────────────────────────────
+  #: 4
+  Issue: DB transaction safety
+  Change: Added pool *pgxpool.Pool to SalesHandler struct and constructor
+  ────────────────────────────────────────
+  #: 5
+  Issue: DB transaction safety
+  Change: Rewrote PostSales to use pool.Begin() / tx.Commit() / defer 
+    tx.Rollback()
+  ────────────────────────────────────────
+  #: 6
+  Issue: DRY: numeric helper
+  Change: Replaced numericToDecimalString definition with note to reuse
+    numericToString
+  ────────────────────────────────────────
+  #: 7
+  Issue: DRY: response type
+  Change: Replaced ledgerTransactionResponse with reuse of
+    FullTransactionResponse
+  ────────────────────────────────────────
+  #: 8
+  Issue: Missing imports
+  Change: Added "fmt" and pgx to sales_test.go imports
+  ────────────────────────────────────────
+  #: 9
+  Issue: Router consistency
+  Change: Updated NewSalesHandler(queries, pool) in router wiring
+  ────────────────────────────────────────
+  #: 10
+  Issue: Search in handler
+  Change: Added search filter param parsing in ListTransactions handler
+  ★ Insight ─────────────────────────────────────
+  - The transaction code collision was the most dangerous bug — it would have
+  been a production 500 error the moment Phase 4 deployed, but only when someone
+   tried to enter a purchase. Easy to miss in testing if you only test
+  sales/payroll/ledger individually.
+  - The DRY fixes (FullTransactionResponse, numericToString) save ~60 lines of
+  duplicated code across phases and eliminate divergence risk where one copy
+  gets a bug fix and the other doesn't.
+  - The DB transaction fix on PostSales mirrors the existing pattern in Phase
+  2's PostBatch — consistency across similar operations makes the codebase more
+  predictable.
+  ─────────────────────────────────────────────────
+
+✻ Cooked for 6m 6s
