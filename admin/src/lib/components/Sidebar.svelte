@@ -21,6 +21,11 @@
 		{ label: 'Settings', href: '/settings', icon: '##', roles: ['OWNER', 'MANAGER'] }
 	];
 
+	const keuanganItems: NavItem[] = [
+		{ label: 'Pembelian', href: '/accounting/purchases', icon: '##', roles: ['OWNER'] },
+		{ label: 'Master Data', href: '/accounting/master', icon: '##', roles: ['OWNER'] }
+	];
+
 	function isActive(href: string): boolean {
 		if (href === '/') return page.url.pathname === '/';
 		return page.url.pathname.startsWith(href);
@@ -62,6 +67,21 @@
 				</a>
 			{/if}
 		{/each}
+
+		{#if user.role === 'OWNER'}
+			<div class="nav-section-divider"></div>
+			<span class="nav-section-label">KEUANGAN</span>
+			{#each keuanganItems as item}
+				<a
+					href={item.href}
+					class="nav-link"
+					class:active={isActive(item.href)}
+				>
+					<span class="nav-icon">{item.icon}</span>
+					<span class="nav-label">{item.label}</span>
+				</a>
+			{/each}
+		{/if}
 	</nav>
 
 	<div class="sidebar-footer">
@@ -158,6 +178,20 @@
 
 	.nav-label {
 		line-height: 1;
+	}
+
+	.nav-section-divider {
+		height: 1px;
+		background-color: var(--color-border);
+		margin: 8px 12px;
+	}
+
+	.nav-section-label {
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--color-text-secondary);
+		letter-spacing: 0.05em;
+		padding: 4px 12px 2px;
 	}
 
 	.sidebar-footer {
