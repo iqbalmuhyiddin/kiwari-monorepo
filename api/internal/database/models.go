@@ -11,6 +11,104 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AcctAccount struct {
+	ID          uuid.UUID `json:"id"`
+	AccountCode string    `json:"account_code"`
+	AccountName string    `json:"account_name"`
+	AccountType string    `json:"account_type"`
+	LineType    string    `json:"line_type"`
+	IsActive    bool      `json:"is_active"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type AcctCashAccount struct {
+	ID              uuid.UUID   `json:"id"`
+	CashAccountCode string      `json:"cash_account_code"`
+	CashAccountName string      `json:"cash_account_name"`
+	BankName        pgtype.Text `json:"bank_name"`
+	Ownership       string      `json:"ownership"`
+	IsActive        bool        `json:"is_active"`
+	CreatedAt       time.Time   `json:"created_at"`
+}
+
+type AcctCashTransaction struct {
+	ID                   uuid.UUID      `json:"id"`
+	TransactionCode      string         `json:"transaction_code"`
+	TransactionDate      pgtype.Date    `json:"transaction_date"`
+	ItemID               pgtype.UUID    `json:"item_id"`
+	Description          string         `json:"description"`
+	Quantity             pgtype.Numeric `json:"quantity"`
+	UnitPrice            pgtype.Numeric `json:"unit_price"`
+	Amount               pgtype.Numeric `json:"amount"`
+	LineType             string         `json:"line_type"`
+	AccountID            uuid.UUID      `json:"account_id"`
+	CashAccountID        pgtype.UUID    `json:"cash_account_id"`
+	OutletID             pgtype.UUID    `json:"outlet_id"`
+	ReimbursementBatchID pgtype.Text    `json:"reimbursement_batch_id"`
+	CreatedAt            time.Time      `json:"created_at"`
+}
+
+type AcctItem struct {
+	ID           uuid.UUID      `json:"id"`
+	ItemCode     string         `json:"item_code"`
+	ItemName     string         `json:"item_name"`
+	ItemCategory string         `json:"item_category"`
+	Unit         string         `json:"unit"`
+	IsInventory  bool           `json:"is_inventory"`
+	IsActive     bool           `json:"is_active"`
+	AveragePrice pgtype.Numeric `json:"average_price"`
+	LastPrice    pgtype.Numeric `json:"last_price"`
+	ForHpp       pgtype.Numeric `json:"for_hpp"`
+	Keywords     string         `json:"keywords"`
+	CreatedAt    time.Time      `json:"created_at"`
+}
+
+type AcctPayrollEntry struct {
+	ID            uuid.UUID          `json:"id"`
+	PayrollDate   pgtype.Date        `json:"payroll_date"`
+	PeriodType    string             `json:"period_type"`
+	PeriodRef     pgtype.Text        `json:"period_ref"`
+	EmployeeName  string             `json:"employee_name"`
+	GrossPay      pgtype.Numeric     `json:"gross_pay"`
+	PaymentMethod string             `json:"payment_method"`
+	CashAccountID uuid.UUID          `json:"cash_account_id"`
+	OutletID      pgtype.UUID        `json:"outlet_id"`
+	PostedAt      pgtype.Timestamptz `json:"posted_at"`
+	CreatedAt     time.Time          `json:"created_at"`
+}
+
+type AcctReimbursementRequest struct {
+	ID          uuid.UUID          `json:"id"`
+	BatchID     pgtype.Text        `json:"batch_id"`
+	ExpenseDate pgtype.Date        `json:"expense_date"`
+	ItemID      pgtype.UUID        `json:"item_id"`
+	Description string             `json:"description"`
+	Qty         pgtype.Numeric     `json:"qty"`
+	UnitPrice   pgtype.Numeric     `json:"unit_price"`
+	Amount      pgtype.Numeric     `json:"amount"`
+	LineType    string             `json:"line_type"`
+	AccountID   uuid.UUID          `json:"account_id"`
+	Status      string             `json:"status"`
+	Requester   string             `json:"requester"`
+	ReceiptLink pgtype.Text        `json:"receipt_link"`
+	PostedAt    pgtype.Timestamptz `json:"posted_at"`
+	CreatedAt   time.Time          `json:"created_at"`
+}
+
+type AcctSalesDailySummary struct {
+	ID             uuid.UUID      `json:"id"`
+	SalesDate      pgtype.Date    `json:"sales_date"`
+	Channel        string         `json:"channel"`
+	PaymentMethod  string         `json:"payment_method"`
+	GrossSales     pgtype.Numeric `json:"gross_sales"`
+	DiscountAmount pgtype.Numeric `json:"discount_amount"`
+	NetSales       pgtype.Numeric `json:"net_sales"`
+	CashAccountID  uuid.UUID      `json:"cash_account_id"`
+	OutletID       pgtype.UUID    `json:"outlet_id"`
+	Source         string         `json:"source"`
+	CreatedAt      time.Time      `json:"created_at"`
+}
+
 type Category struct {
 	ID          uuid.UUID   `json:"id"`
 	OutletID    uuid.UUID   `json:"outlet_id"`
