@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
+	accthandler "github.com/kiwari-pos/api/internal/accounting/handler"
 	"github.com/kiwari-pos/api/internal/config"
 	"github.com/kiwari-pos/api/internal/database"
 	"github.com/kiwari-pos/api/internal/handler"
@@ -64,6 +65,21 @@ func New(cfg *config.Config, queries *database.Queries, pool *pgxpool.Pool, hub 
 			r.Use(mw.RequireRole("OWNER"))
 			reportsHandler := handler.NewReportsHandler(queries)
 			r.Route("/reports", reportsHandler.RegisterOwnerRoutes)
+		})
+
+		// Accounting routes (OWNER only, not outlet-scoped)
+		r.Group(func(r chi.Router) {
+			r.Use(mw.RequireRole("OWNER"))
+
+			// Master data
+			masterHandler := accthandler.NewMasterHandler(queries, queries, queries)
+			r.Route("/accounting/master/accounts", masterHandler.RegisterAccountRoutes)
+			r.Route("/accounting/master/items", masterHandler.RegisterItemRoutes)
+			r.Route("/accounting/master/cash-accounts", masterHandler.RegisterCashAccountRoutes)
+
+			// Purchases
+			purchaseHandler := accthandler.NewPurchaseHandler(queries)
+			r.Route("/accounting/purchases", purchaseHandler.RegisterRoutes)
 		})
 
 		// Outlet-scoped routes
