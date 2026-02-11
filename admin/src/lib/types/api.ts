@@ -286,3 +286,57 @@ export interface CustomerStats {
 	avg_ticket: string;
 	top_items: CustomerTopItem[];
 }
+
+// ── Accounting types ────────────────────
+
+export interface AcctAccount {
+	id: string;
+	account_code: string;
+	account_name: string;
+	account_type: 'Asset' | 'Liability' | 'Equity' | 'Revenue' | 'Expense';
+	line_type: string;
+	is_active: boolean;
+	created_at: string;
+}
+
+export interface AcctItem {
+	id: string;
+	item_code: string;
+	item_name: string;
+	item_category: 'Raw Material' | 'Packaging' | 'Consumable';
+	unit: string;
+	is_inventory: boolean;
+	is_active: boolean;
+	average_price: string | null;
+	last_price: string | null;
+	for_hpp: string | null;
+	keywords: string;
+	created_at: string;
+}
+
+export interface AcctCashAccount {
+	id: string;
+	cash_account_code: string;
+	cash_account_name: string;
+	bank_name: string | null;
+	ownership: 'Business' | 'Personal';
+	is_active: boolean;
+	created_at: string;
+}
+
+export interface AcctCashTransaction {
+	id: string;
+	transaction_code: string;
+	transaction_date: string;
+	item_id: string | null;
+	description: string;
+	quantity: string;
+	unit_price: string;
+	amount: string;
+	line_type: string;
+	account_id: string;
+	cash_account_id: string | null;
+	outlet_id: string | null;
+	reimbursement_batch_id: string | null;
+	created_at: string;
+}
