@@ -1,0 +1,646 @@
+{
+  "name": "01 - Reimbursement Bot: Message Handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "f0f4b877-c535-413f-a67c-f60c7e4526bb",
+      "name": "WAHA Trigger",
+      "type": "@devlikeapro/n8n-nodes-waha.wahaTrigger",
+      "typeVersion": 202409,
+      "position": [
+        6800,
+        928
+      ],
+      "webhookId": "reimbursement-trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "group-check",
+              "leftValue": "={{ $json.payload.from }}",
+              "rightValue": "120363421848364675@g.us",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2c7e5440-2ef4-48be-8637-9cfa53874d88",
+      "name": "IF: Is Target Group",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        7024,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "command-check",
+              "leftValue": "={{ $json.payload.body }}",
+              "rightValue": "/",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4bc65a4a-0cfc-42fe-abc0-ffd7c45c8aab",
+      "name": "IF: Is Command",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        7248,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse reimbursement message with qty, unit, and price\nconst message = $input.first().json.payload.body;\nconst senderPhone = $input.first().json.payload.participant || $input.first().json.payload.from;\nconst loggedBy = $input.first().json.payload._data.notifyName;\nconst chatId = $input.first().json.payload.from;\n\n// Indonesian month names mapping\nconst months = {\n  'jan': 0, 'januari': 0,\n  'feb': 1, 'februari': 1,\n  'mar': 2, 'maret': 2,\n  'apr': 3, 'april': 3,\n  'mei': 4,\n  'jun': 5, 'juni': 5,\n  'jul': 6, 'juli': 6,\n  'agu': 7, 'agustus': 7,\n  'sep': 8, 'september': 8,\n  'okt': 9, 'oktober': 9,\n  'nov': 10, 'november': 10,\n  'des': 11, 'desember': 11\n};\n\n// Date parsing regex patterns\nconst dateTextRegex = /^(\\d{1,2})\\s+(jan|januari|feb|februari|mar|maret|apr|april|mei|jun|juni|jul|juli|agu|agustus|sep|september|okt|oktober|nov|november|des|desember)$/i;\nconst dateNumericRegex = /^(\\d{1,2})[\\/-](\\d{1,2})$/;\n\n// Item line regex: \"item name QTYunit PRICEk\"\n// Examples: \"beras 5KG 79K\", \"ayam dada 3KG 60K\", \"gas 2pcs 54K\"\nconst itemRegex = /^(.+?)\\s+(\\d+(?:[.,]\\d+)?)\\s*(kg|g|pcs|pack|liter|l|butir|ikat|lembar|batang)?\\s+(\\d+(?:[.,]\\d+)?)\\s*([kK])?$/i;\n\n// Split message into lines\nconst lines = message.split('\\n').map(line => line.trim()).filter(line => line.length > 0);\n\n// Try to parse first line as date\nlet parsedDate = new Date(); // Default to today\nlet itemLines = lines;\nlet dateWasSpecified = false;\n\nif (lines.length > 0) {\n  const firstLine = lines[0];\n  \n  // Try text date format (e.g., \"20 jan\", \"20 januari\")\n  let dateMatch = firstLine.match(dateTextRegex);\n  if (dateMatch) {\n    const day = parseInt(dateMatch[1]);\n    const monthStr = dateMatch[2].toLowerCase();\n    const month = months[monthStr];\n    \n    const now = new Date();\n    parsedDate = new Date(now.getFullYear(), month, day);\n    itemLines = lines.slice(1);\n    dateWasSpecified = true;\n  } else {\n    // Try numeric date format (e.g., \"20/1\", \"20-1\")\n    dateMatch = firstLine.match(dateNumericRegex);\n    if (dateMatch) {\n      const day = parseInt(dateMatch[1]);\n      const month = parseInt(dateMatch[2]) - 1; // months are 0-indexed\n      \n      const now = new Date();\n      parsedDate = new Date(now.getFullYear(), month, day);\n      itemLines = lines.slice(1);\n      dateWasSpecified = true;\n    }\n  }\n}\n\n// Format date as M/D/YYYY for Google Sheets\nconst expenseDate = `${parsedDate.getMonth() + 1}/${parsedDate.getDate()}/${parsedDate.getFullYear()}`;\n\n// Parse each item line\nconst items = [];\nconst invalidLines = [];\n\nfor (const line of itemLines) {\n  const match = line.match(itemRegex);\n  \n  if (match) {\n    const rawDescription = match[1].trim();\n    const qty = parseFloat(match[2].replace(',', '.'));\n    const unit = (match[3] || 'pcs').toLowerCase();\n    const priceValue = parseFloat(match[4].replace(',', '.'));\n    const hasKNotation = !!match[5]; // Check if K/k was present\n    const totalPrice = hasKNotation ? priceValue * 1000 : priceValue;\n    const unitPrice = Math.round(totalPrice / qty);\n    \n    // Extract keyword for matching (first word, normalized)\n    const rawKeyword = rawDescription.split(' ')[0].toLowerCase();\n    \n    items.push({\n      description: `${rawDescription} ${qty}${unit.toUpperCase()}`,\n      qty,\n      unit,\n      totalPrice,\n      unitPrice,\n      rawKeyword,\n      rawDescription,\n      expense_date: expenseDate,\n      rawLine: line\n    });\n  } else {\n    invalidLines.push(line);\n  }\n}\n\nreturn {\n  json: {\n    items,\n    invalidLines,\n    parsedDate: parsedDate.toISOString(),\n    expenseDate,\n    rawMessage: message,\n    chatId,\n    loggedBy,\n    dateWasSpecified\n  }\n};"
+      },
+      "id": "e2a3f89a-5b03-4f91-bccf-38ad41993e5c",
+      "name": "Parse Reimbursement Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7472,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "valid-check",
+              "leftValue": "={{ $json.items.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9cd2202d-e345-4f36-8372-88ae9969c954",
+      "name": "IF: Has Items",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        7696,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Deduplicate messages using workflow static data\nconst messageBody = $input.first().json.rawMessage;\nconst messageFrom = $input.first().json.chatId;\nconst messageKey = `${messageFrom}:${messageBody}`;\n\nconst staticData = $getWorkflowStaticData('global');\nconst lastProcessed = staticData.lastProcessed || {};\nconst now = Date.now();\n\n// Clean old entries (older than 10 seconds)\nfor (const key in lastProcessed) {\n  if (now - lastProcessed[key] > 10000) {\n    delete lastProcessed[key];\n  }\n}\n\n// Check if already processed\nif (lastProcessed[messageKey] && (now - lastProcessed[messageKey] < 5000)) {\n  return []; // Skip - already processed\n}\n\n// Mark as processed\nlastProcessed[messageKey] = now;\nstaticData.lastProcessed = lastProcessed;\n\nreturn $input.all();"
+      },
+      "id": "3bc13113-dc31-419b-aea1-80641afb2348",
+      "name": "Deduplicate Messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7920,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1FwYEODiowxt7IUEhQB6gE66zsope5gMmVYqmJ6vVPoU",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1204623900,
+          "mode": "list",
+          "cachedResultName": "MASTER_ITEM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FwYEODiowxt7IUEhQB6gE66zsope5gMmVYqmJ6vVPoU/edit#gid=1204623900"
+        },
+        "options": {}
+      },
+      "id": "b83b120a-7fbb-412d-9a6f-e2b30f086302",
+      "name": "Get MASTER_ITEM",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        8144,
+        1120
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "syrsGVPJzVqY0bKC",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Match parsed items to MASTER_ITEM sheet with improved keyword matching\nconst allMasterItems = $('Get MASTER_ITEM').all().map(item => item.json);\n\n// Get original parsed data\nconst originalData = $('Deduplicate Messages').first().json;\nconst parsedItems = originalData.items || [];\nconst expenseDate = originalData.expenseDate;\nconst chatId = originalData.chatId;\nconst loggedBy = originalData.loggedBy;\nconst invalidLines = originalData.invalidLines || [];\n\n// Default values\nconst DEFAULT_LINE_TYPE = 'INVENTORY';\nconst DEFAULT_ACCOUNT_DISPLAY = '1200 - Inventory - Raw Materials';\nconst DEFAULT_ACCOUNT_CODE = '1200';\nconst DEFAULT_STATUS = 'Draft';\n\n// Define discriminating keyword groups\nconst COLOR_KEYWORDS = ['merah', 'hijau'];\nconst VARIANT_KEYWORDS = ['tanjung', 'kriting', 'keriting', 'tw', 'rawit'];\n\n// Match each item using keyword-based scoring\nconst matchedItems = [];\n\nfor (const item of parsedItems) {\n  // Tokenize user input\n  const inputTokens = item.rawDescription\n    .toLowerCase()\n    .replace(/[^a-z0-9\\s]/g, '')\n    .split(/\\s+/)\n    .filter(t => t.length > 0);\n\n  // Check which discriminating keywords are in input\n  const inputHasColor = inputTokens.some(t => COLOR_KEYWORDS.includes(t));\n  const inputHasVariant = inputTokens.some(t => VARIANT_KEYWORDS.includes(t));\n\n  // Score each master item\n  const candidates = [];\n\n  for (const master of allMasterItems) {\n    const keywordsStr = (master.keywords || '').toLowerCase();\n    const itemKeywords = keywordsStr.split(',').map(k => k.trim()).filter(k => k.length > 0);\n\n    // Hard filter: If input has color/variant, item MUST have it\n    let passesFilter = true;\n    for (const token of inputTokens) {\n      if (COLOR_KEYWORDS.includes(token) || VARIANT_KEYWORDS.includes(token)) {\n        if (!itemKeywords.includes(token)) {\n          passesFilter = false;\n          break;\n        }\n      }\n    }\n\n    if (!passesFilter) continue;\n\n    // Calculate score\n    let score = 0;\n    for (const token of inputTokens) {\n      if (itemKeywords.includes(token)) {\n        if (COLOR_KEYWORDS.includes(token) || VARIANT_KEYWORDS.includes(token)) {\n          score += 5;  // High weight for color/variant\n        } else {\n          score += 1;  // Normal weight\n        }\n      }\n    }\n\n    if (score > 0) {\n      // Track which discriminating keywords this item has\n      const itemHasColor = itemKeywords.some(k => COLOR_KEYWORDS.includes(k));\n      const itemHasVariant = itemKeywords.some(k => VARIANT_KEYWORDS.includes(k));\n      candidates.push({ master, score, itemHasColor, itemHasVariant, itemKeywords });\n    }\n  }\n\n  // Determine best match with ambiguity check\n  let bestMatch = null;\n  let ambiguousOptions = [];  // Track options for ambiguous items\n  \n  if (candidates.length === 0) {\n    bestMatch = null;  // No match\n  } else if (candidates.length === 1) {\n    bestMatch = candidates[0].master;  // Single match\n  } else {\n    // Multiple candidates - check for ambiguity\n    const topScore = Math.max(...candidates.map(c => c.score));\n    const topCandidates = candidates.filter(c => c.score === topScore);\n\n    if (topCandidates.length === 1) {\n      bestMatch = topCandidates[0].master;  // Clear winner by score\n    } else {\n      // Check if they differ by color/variant that input didn't specify\n      const colors = new Set(topCandidates.flatMap(c =>\n        c.itemKeywords.filter(k => COLOR_KEYWORDS.includes(k))\n      ));\n      const variants = new Set(topCandidates.flatMap(c =>\n        c.itemKeywords.filter(k => VARIANT_KEYWORDS.includes(k))\n      ));\n\n      if ((!inputHasColor && colors.size > 1) || (!inputHasVariant && variants.size > 1)) {\n        // AMBIGUOUS - capture options for user feedback\n        bestMatch = null;\n        ambiguousOptions = topCandidates.map(c => c.master.item_name);\n      } else {\n        bestMatch = topCandidates[0].master;  // Same color/variant, pick first\n      }\n    }\n  }\n\n  if (bestMatch) {\n    // Matched item\n    matchedItems.push({\n      expense_date: expenseDate,\n      item_display: `${bestMatch.item_display_unit}`,\n      item_code: bestMatch.item_code,\n      description: item.description,\n      qty: item.qty,\n      unit_price: item.unitPrice,\n      amount: item.totalPrice,\n      line_type: DEFAULT_LINE_TYPE,\n      account_display: DEFAULT_ACCOUNT_DISPLAY,\n      account_code: DEFAULT_ACCOUNT_CODE,\n      status: DEFAULT_STATUS,\n      matched: true,\n      ambiguous: false,\n      ambiguousOptions: [],\n      rawLine: item.rawLine,\n      requester: loggedBy\n    });\n  } else {\n    // Unmatched item - use raw description as fallback\n    matchedItems.push({\n      expense_date: expenseDate,\n      item_display: item.description,\n      item_code: '',\n      description: item.description,\n      qty: item.qty,\n      unit_price: item.unitPrice,\n      amount: item.totalPrice,\n      line_type: DEFAULT_LINE_TYPE,\n      account_display: DEFAULT_ACCOUNT_DISPLAY,\n      account_code: DEFAULT_ACCOUNT_CODE,\n      status: DEFAULT_STATUS,\n      matched: false,\n      ambiguous: ambiguousOptions.length > 0,\n      ambiguousOptions: ambiguousOptions,\n      rawLine: item.rawLine,\n      requester: loggedBy\n    });\n  }\n}\n\nreturn {\n  json: {\n    items: matchedItems,\n    invalidLines,\n    expenseDate,\n    chatId,\n    loggedBy\n  }\n};"
+      },
+      "id": "368f2964-d43a-4098-8787-34cb8d3fc40e",
+      "name": "Match Items to Master",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8368,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "id": "d8f4544b-ae67-414b-bd31-52a15394980f",
+      "name": "Split Items",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        8592,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1FwYEODiowxt7IUEhQB6gE66zsope5gMmVYqmJ6vVPoU",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1751195710,
+          "mode": "list",
+          "cachedResultName": "REIMBURSEMENT_REQUEST",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FwYEODiowxt7IUEhQB6gE66zsope5gMmVYqmJ6vVPoU/edit#gid=1751195710"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "expense_date": "={{ $json.expense_date }}",
+            "item_display": "={{ $json.item_display }}",
+            "description": "={{ $json.description }}",
+            "qty": "={{ $json.qty }}",
+            "unit_price": "={{ $json.unit_price }}",
+            "account_display": "={{ $json.account_display }}",
+            "status": "={{ $json.status }}",
+            "requester": "={{ $json.requester }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "batch_id",
+              "displayName": "batch_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "expense_date",
+              "displayName": "expense_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "item_display",
+              "displayName": "item_display",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "item_code",
+              "displayName": "item_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "qty",
+              "displayName": "qty",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "unit_price",
+              "displayName": "unit_price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "line_type",
+              "displayName": "line_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "account_display",
+              "displayName": "account_display",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "account_code",
+              "displayName": "account_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "requester",
+              "displayName": "requester",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "receipt_link",
+              "displayName": "receipt_link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "posted_at",
+              "displayName": "posted_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "1329fad5-7844-4e04-9941-351396f17d71",
+      "name": "Append to REIMBURSEMENT_REQUEST",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        8816,
+        1120
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "syrsGVPJzVqY0bKC",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "id": "421c5107-5258-4659-88d0-2660d314f34f",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        9040,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format confirmation message for reimbursement (Bahasa Indonesia)\nconst allItems = $('Split Items').all();\n\n// Format amount in Indonesian Rupiah\nconst formatRupiah = (num) => {\n  if (num >= 1000000) {\n    return `Rp${(num / 1000000).toFixed(1)}jt`;\n  } else if (num >= 1000) {\n    const kValue = num / 1000;\n    // Show decimal only if needed (e.g., 2.5K), otherwise whole number (e.g., 79K)\n    return `Rp${kValue % 1 === 0 ? kValue : kValue.toFixed(1)}K`;\n  }\n  return `Rp${num.toLocaleString('id-ID')}`;\n};\n\n// Format date for display\nconst formatDate = (dateStr) => {\n  // dateStr is in M/D/YYYY format\n  const parts = dateStr.split('/');\n  const month = parseInt(parts[0]) - 1;\n  const day = parseInt(parts[1]);\n  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];\n  return `${day} ${months[month]}`;\n};\n\n// Get metadata\nconst originalData = $('Match Items to Master').first().json;\nconst expenseDate = originalData.expenseDate;\nconst chatId = originalData.chatId;\nconst loggedBy = originalData.loggedBy;\nconst invalidLines = originalData.invalidLines || [];\n\n// Separate matched, ambiguous, and unmatched items\nconst matchedItems = allItems.filter(item => item.json.matched);\nconst ambiguousItems = allItems.filter(item => !item.json.matched && item.json.ambiguous);\nconst unmatchedItems = allItems.filter(item => !item.json.matched && !item.json.ambiguous);\n\n// Calculate totals\nconst totalAmount = allItems.reduce((sum, item) => sum + item.json.amount, 0);\nconst totalCount = allItems.length;\n\n// Build message\nlet message = `\\u2705 Reimbursement Draft (${formatDate(expenseDate)}):\\n\\n`;\n\n// Matched items (Cocok)\nif (matchedItems.length > 0) {\n  message += `\\ud83d\\udce6 Cocok (${matchedItems.length}):\\n`;\n  for (const item of matchedItems) {\n    const i = item.json;\n    message += `\\u2022 ${i.item_display} - ${formatRupiah(i.amount)}\\n`;\n  }\n  message += '\\n';\n}\n\n// Ambiguous items (Perlu diperjelas)\nif (ambiguousItems.length > 0) {\n  message += `\\u26a0\\ufe0f Perlu diperjelas (${ambiguousItems.length}):\\n`;\n  for (const item of ambiguousItems) {\n    const i = item.json;\n    message += `\\u2022 \"${i.rawLine}\" - ${formatRupiah(i.amount)}\\n`;\n    message += `  \\u2192 Pilih: ${i.ambiguousOptions.join(' atau ')}\\n`;\n  }\n  message += '\\n';\n}\n\n// Unmatched items (Tidak ditemukan)\nif (unmatchedItems.length > 0) {\n  message += `\\u26a0\\ufe0f Tidak ditemukan (${unmatchedItems.length}):\\n`;\n  for (const item of unmatchedItems) {\n    const i = item.json;\n    message += `\\u2022 ${i.description} - ${formatRupiah(i.amount)}\\n`;\n  }\n  message += '\\n';\n}\n\n// Invalid lines warning (Gagal diproses)\nif (invalidLines.length > 0) {\n  message += `\\u274c Gagal diproses (${invalidLines.length}):\\n`;\n  for (const line of invalidLines) {\n    message += `\\u2022 \"${line}\"\\n`;\n  }\n  message += '\\n';\n}\n\nmessage += `Total: ${formatRupiah(totalAmount)} (${totalCount} item)\\n`;\nmessage += `Status: Draft\\n`;\nmessage += `\\ud83d\\udc64 ${loggedBy}`;\n\nreturn {\n  json: {\n    message,\n    chatId\n  }\n};"
+      },
+      "id": "ceef7cac-e353-4e2b-ad3f-01aaad566a28",
+      "name": "Format Confirmation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9264,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "=default",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "requestOptions": {}
+      },
+      "id": "90589b48-d05c-4796-9bf0-d02cb7103877",
+      "name": "Send WhatsApp Reply",
+      "type": "@devlikeapro/n8n-nodes-waha.WAHA",
+      "typeVersion": 202409,
+      "position": [
+        9488,
+        1120
+      ],
+      "credentials": {
+        "wahaApi": {
+          "id": "hr34YDdJwKnR9fdp",
+          "name": "WAHA account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "0075a764-b4c6-4667-8fab-8dff92cbe833",
+      "name": "No Op (Invalid)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        7920,
+        1312
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "59608baf-40ad-4de4-a524-2a5fbb4e432b",
+      "name": "No Op (Other Group)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        7248,
+        1312
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "f395c805-8abe-4e1c-983e-3c309e624531",
+      "name": "No Op (Command)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        7472,
+        1024
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "WAHA Trigger": {
+      "main": [
+        [],
+        [
+          {
+            "node": "IF: Is Target Group",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Is Target Group": {
+      "main": [
+        [
+          {
+            "node": "IF: Is Command",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Op (Other Group)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Is Command": {
+      "main": [
+        [
+          {
+            "node": "No Op (Command)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parse Reimbursement Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Reimbursement Message": {
+      "main": [
+        [
+          {
+            "node": "IF: Has Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Has Items": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate Messages",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Op (Invalid)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicate Messages": {
+      "main": [
+        [
+          {
+            "node": "Get MASTER_ITEM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get MASTER_ITEM": {
+      "main": [
+        [
+          {
+            "node": "Match Items to Master",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match Items to Master": {
+      "main": [
+        [
+          {
+            "node": "Split Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Items": {
+      "main": [
+        [
+          {
+            "node": "Append to REIMBURSEMENT_REQUEST",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to REIMBURSEMENT_REQUEST": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "Format Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Confirmation": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "ad35771f-6ed6-418e-8811-854786efab41",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "964dca6a6ac3c9e84f90e962312aa9064175cb71ace8227e696d3e35393ba66f"
+  },
+  "id": "VRKLcQwjMObVVzvd",
+  "tags": []
+}
