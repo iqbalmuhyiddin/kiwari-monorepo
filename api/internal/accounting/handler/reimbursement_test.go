@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -400,5 +401,364 @@ func TestReimbursementGet_NotFound(t *testing.T) {
 
 	if rr.Code != http.StatusNotFound {
 		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusNotFound, rr.Body.String())
+	}
+}
+
+// --- Batch Tests ---
+
+func TestBatchAssign_Valid(t *testing.T) {
+	store := newMockReimbursementStore()
+	router := setupReimbursementRouter(store)
+
+	// Seed 2 Draft reimbursement requests
+	id1 := uuid.New()
+	id2 := uuid.New()
+	accountID := uuid.New()
+
+	var qtyPg, pricePg, amountPg pgtype.Numeric
+	qtyPg.Scan("5.0000")
+	pricePg.Scan("100000.00")
+	amountPg.Scan("500000.00")
+
+	store.requests[id1] = database.AcctReimbursementRequest{
+		ID:          id1,
+		ExpenseDate: pgtype.Date{Time: time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC), Valid: true},
+		Description: "Request 1",
+		Qty:         qtyPg,
+		UnitPrice:   pricePg,
+		Amount:      amountPg,
+		LineType:    "EXPENSE",
+		AccountID:   accountID,
+		Status:      "Draft",
+		Requester:   "John Doe",
+		CreatedAt:   time.Now(),
+	}
+
+	store.requests[id2] = database.AcctReimbursementRequest{
+		ID:          id2,
+		ExpenseDate: pgtype.Date{Time: time.Date(2026, 1, 21, 0, 0, 0, 0, time.UTC), Valid: true},
+		Description: "Request 2",
+		Qty:         qtyPg,
+		UnitPrice:   pricePg,
+		Amount:      amountPg,
+		LineType:    "EXPENSE",
+		AccountID:   accountID,
+		Status:      "Draft",
+		Requester:   "Jane Doe",
+		CreatedAt:   time.Now(),
+	}
+
+	// Assign batch
+	payload := map[string]interface{}{
+		"ids": []string{id1.String(), id2.String()},
+	}
+
+	rr := doRequest(t, router, "POST", "/accounting/reimbursements/batch", payload)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+
+	resp := decodeJSON(t, rr.Body.Bytes())
+
+	if resp["assigned"] != float64(2) {
+		t.Errorf("assigned: got %v, want 2", resp["assigned"])
+	}
+
+	batchID, ok := resp["batch_id"].(string)
+	if !ok || !strings.HasPrefix(batchID, "RMB") {
+		t.Errorf("batch_id: got %v, want RMB prefix", batchID)
+	}
+
+	// Verify both items now have status "Ready"
+	r1 := store.requests[id1]
+	r2 := store.requests[id2]
+
+	if r1.Status != "Ready" {
+		t.Errorf("request 1 status: got %v, want Ready", r1.Status)
+	}
+	if r2.Status != "Ready" {
+		t.Errorf("request 2 status: got %v, want Ready", r2.Status)
+	}
+}
+
+func TestBatchAssign_EmptyIDs(t *testing.T) {
+	store := newMockReimbursementStore()
+	router := setupReimbursementRouter(store)
+
+	payload := map[string]interface{}{
+		"ids": []string{},
+	}
+
+	rr := doRequest(t, router, "POST", "/accounting/reimbursements/batch", payload)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusBadRequest, rr.Body.String())
+	}
+}
+
+func TestBatchAssign_NonDraftNotCounted(t *testing.T) {
+	store := newMockReimbursementStore()
+	router := setupReimbursementRouter(store)
+
+	// Seed 1 Draft and 1 Ready item
+	draftID := uuid.New()
+	readyID := uuid.New()
+	accountID := uuid.New()
+
+	var qtyPg, pricePg, amountPg pgtype.Numeric
+	qtyPg.Scan("5.0000")
+	pricePg.Scan("100000.00")
+	amountPg.Scan("500000.00")
+
+	store.requests[draftID] = database.AcctReimbursementRequest{
+		ID:          draftID,
+		ExpenseDate: pgtype.Date{Time: time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC), Valid: true},
+		Description: "Draft request",
+		Qty:         qtyPg,
+		UnitPrice:   pricePg,
+		Amount:      amountPg,
+		LineType:    "EXPENSE",
+		AccountID:   accountID,
+		Status:      "Draft",
+		Requester:   "John Doe",
+		CreatedAt:   time.Now(),
+	}
+
+	store.requests[readyID] = database.AcctReimbursementRequest{
+		ID:          readyID,
+		ExpenseDate: pgtype.Date{Time: time.Date(2026, 1, 21, 0, 0, 0, 0, time.UTC), Valid: true},
+		Description: "Ready request",
+		Qty:         qtyPg,
+		UnitPrice:   pricePg,
+		Amount:      amountPg,
+		LineType:    "EXPENSE",
+		AccountID:   accountID,
+		Status:      "Ready",
+		Requester:   "Jane Doe",
+		CreatedAt:   time.Now(),
+	}
+
+	// POST batch assign with both IDs
+	payload := map[string]interface{}{
+		"ids": []string{draftID.String(), readyID.String()},
+	}
+
+	rr := doRequest(t, router, "POST", "/accounting/reimbursements/batch", payload)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+
+	resp := decodeJSON(t, rr.Body.Bytes())
+
+	// Only the Draft one should be assigned
+	if resp["assigned"] != float64(1) {
+		t.Errorf("assigned: got %v, want 1 (only Draft item)", resp["assigned"])
+	}
+}
+
+func TestBatchPost_Valid(t *testing.T) {
+	store := newMockReimbursementStore()
+	router := setupReimbursementRouter(store)
+
+	// Seed 1 Ready item with batch_id "RMB001"
+	id := uuid.New()
+	accountID := uuid.New()
+	cashAccountID := uuid.New()
+	itemID := uuid.New()
+
+	var qtyPg, pricePg, amountPg pgtype.Numeric
+	qtyPg.Scan("5.0000")
+	pricePg.Scan("100000.00")
+	amountPg.Scan("500000.00")
+
+	store.requests[id] = database.AcctReimbursementRequest{
+		ID:          id,
+		BatchID:     pgtype.Text{String: "RMB001", Valid: true},
+		ExpenseDate: pgtype.Date{Time: time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC), Valid: true},
+		ItemID:      pgtype.UUID{Bytes: itemID, Valid: true},
+		Description: "Ready request",
+		Qty:         qtyPg,
+		UnitPrice:   pricePg,
+		Amount:      amountPg,
+		LineType:    "EXPENSE",
+		AccountID:   accountID,
+		Status:      "Ready",
+		Requester:   "John Doe",
+		CreatedAt:   time.Now(),
+	}
+
+	// POST batch/post
+	payload := map[string]interface{}{
+		"batch_id":        "RMB001",
+		"payment_date":    "2026-01-25",
+		"cash_account_id": cashAccountID.String(),
+	}
+
+	rr := doRequest(t, router, "POST", "/accounting/reimbursements/batch/post", payload)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusCreated, rr.Body.String())
+	}
+
+	resp := decodeJSON(t, rr.Body.Bytes())
+
+	if resp["posted"] != float64(1) {
+		t.Errorf("posted: got %v, want 1", resp["posted"])
+	}
+
+	// Verify store item now has status "Posted"
+	r := store.requests[id]
+	if r.Status != "Posted" {
+		t.Errorf("request status: got %v, want Posted", r.Status)
+	}
+	if !r.PostedAt.Valid {
+		t.Error("posted_at should be set")
+	}
+
+	// Verify 1 cash transaction was created
+	if len(store.txns) != 1 {
+		t.Fatalf("txns count: got %d, want 1", len(store.txns))
+	}
+
+	tx := store.txns[0]
+	if tx.ReimbursementBatchID.String != "RMB001" {
+		t.Errorf("txn batch_id: got %v, want RMB001", tx.ReimbursementBatchID.String)
+	}
+}
+
+func TestBatchPost_AlreadyPosted(t *testing.T) {
+	store := newMockReimbursementStore()
+	router := setupReimbursementRouter(store)
+
+	// Seed 1 Posted item with batch_id "RMB001"
+	id := uuid.New()
+	accountID := uuid.New()
+
+	var qtyPg, pricePg, amountPg pgtype.Numeric
+	qtyPg.Scan("5.0000")
+	pricePg.Scan("100000.00")
+	amountPg.Scan("500000.00")
+
+	store.requests[id] = database.AcctReimbursementRequest{
+		ID:          id,
+		BatchID:     pgtype.Text{String: "RMB001", Valid: true},
+		ExpenseDate: pgtype.Date{Time: time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC), Valid: true},
+		Description: "Posted request",
+		Qty:         qtyPg,
+		UnitPrice:   pricePg,
+		Amount:      amountPg,
+		LineType:    "EXPENSE",
+		AccountID:   accountID,
+		Status:      "Posted",
+		Requester:   "John Doe",
+		PostedAt:    pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		CreatedAt:   time.Now(),
+	}
+
+	// POST batch/post with same batch_id
+	payload := map[string]interface{}{
+		"batch_id":        "RMB001",
+		"payment_date":    "2026-01-25",
+		"cash_account_id": uuid.New().String(),
+	}
+
+	rr := doRequest(t, router, "POST", "/accounting/reimbursements/batch/post", payload)
+
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusConflict, rr.Body.String())
+	}
+}
+
+func TestBatchPost_EmptyBatch(t *testing.T) {
+	store := newMockReimbursementStore()
+	router := setupReimbursementRouter(store)
+
+	// POST batch/post with batch_id that doesn't exist
+	payload := map[string]interface{}{
+		"batch_id":        "NONEXISTENT",
+		"payment_date":    "2026-01-25",
+		"cash_account_id": uuid.New().String(),
+	}
+
+	rr := doRequest(t, router, "POST", "/accounting/reimbursements/batch/post", payload)
+
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusNotFound, rr.Body.String())
+	}
+}
+
+func TestBatchPost_OnlyProcessesReady(t *testing.T) {
+	store := newMockReimbursementStore()
+	router := setupReimbursementRouter(store)
+
+	// Seed 2 items in same batch: 1 Ready, 1 Draft
+	readyID := uuid.New()
+	draftID := uuid.New()
+	accountID := uuid.New()
+	cashAccountID := uuid.New()
+	itemID := uuid.New()
+
+	var qtyPg, pricePg, amountPg pgtype.Numeric
+	qtyPg.Scan("5.0000")
+	pricePg.Scan("100000.00")
+	amountPg.Scan("500000.00")
+
+	store.requests[readyID] = database.AcctReimbursementRequest{
+		ID:          readyID,
+		BatchID:     pgtype.Text{String: "RMB001", Valid: true},
+		ExpenseDate: pgtype.Date{Time: time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC), Valid: true},
+		ItemID:      pgtype.UUID{Bytes: itemID, Valid: true},
+		Description: "Ready request",
+		Qty:         qtyPg,
+		UnitPrice:   pricePg,
+		Amount:      amountPg,
+		LineType:    "EXPENSE",
+		AccountID:   accountID,
+		Status:      "Ready",
+		Requester:   "John Doe",
+		CreatedAt:   time.Now(),
+	}
+
+	store.requests[draftID] = database.AcctReimbursementRequest{
+		ID:          draftID,
+		BatchID:     pgtype.Text{String: "RMB001", Valid: true},
+		ExpenseDate: pgtype.Date{Time: time.Date(2026, 1, 21, 0, 0, 0, 0, time.UTC), Valid: true},
+		ItemID:      pgtype.UUID{Bytes: itemID, Valid: true},
+		Description: "Draft request (shouldn't be in batch)",
+		Qty:         qtyPg,
+		UnitPrice:   pricePg,
+		Amount:      amountPg,
+		LineType:    "EXPENSE",
+		AccountID:   accountID,
+		Status:      "Draft",
+		Requester:   "Jane Doe",
+		CreatedAt:   time.Now(),
+	}
+
+	// POST batch/post
+	payload := map[string]interface{}{
+		"batch_id":        "RMB001",
+		"payment_date":    "2026-01-25",
+		"cash_account_id": cashAccountID.String(),
+	}
+
+	rr := doRequest(t, router, "POST", "/accounting/reimbursements/batch/post", payload)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusCreated, rr.Body.String())
+	}
+
+	resp := decodeJSON(t, rr.Body.Bytes())
+
+	// Only the Ready item should be posted
+	if resp["posted"] != float64(1) {
+		t.Errorf("posted: got %v, want 1 (only Ready item)", resp["posted"])
+	}
+
+	// Verify only 1 cash transaction created
+	if len(store.txns) != 1 {
+		t.Fatalf("txns count: got %d, want 1", len(store.txns))
 	}
 }
