@@ -23,6 +23,7 @@
 
 	const keuanganItems: NavItem[] = [
 		{ label: 'Pembelian', href: '/accounting/purchases', icon: '##', roles: ['OWNER'] },
+		{ label: 'Reimburse', href: '/accounting/reimbursements', icon: '##', roles: ['OWNER'] },
 		{ label: 'Master Data', href: '/accounting/master', icon: '##', roles: ['OWNER'] }
 	];
 
