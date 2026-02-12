@@ -340,3 +340,40 @@ export interface AcctCashTransaction {
 	reimbursement_batch_id: string | null;
 	created_at: string;
 }
+
+export interface AcctReimbursementRequest {
+	id: string;
+	batch_id: string | null;
+	expense_date: string;
+	item_id: string | null;
+	description: string;
+	qty: string;
+	unit_price: string;
+	amount: string;
+	line_type: string;
+	account_id: string;
+	status: 'Draft' | 'Ready' | 'Posted';
+	requester: string;
+	receipt_link: string | null;
+	posted_at: string | null;
+	created_at: string;
+}
+
+export interface BatchAssignResponse {
+	batch_id: string;
+	assigned: number;
+}
+
+export interface BatchPostResponse {
+	batch_id: string;
+	posted: number;
+	transactions: AcctCashTransaction[];
+}
+
+export interface WhatsAppReimbursementResponse {
+	reply_message: string;
+	items_created: number;
+	items_matched: number;
+	items_ambiguous: number;
+	items_unmatched: number;
+}
