@@ -801,6 +801,14 @@ func (h *ReimbursementHandler) PostBatch(w http.ResponseWriter, r *http.Request)
 		posted++
 	}
 
+	// Guard: don't mark batch as posted if no Ready items found
+	if posted == 0 {
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{
+			"error": "no ready items found in batch",
+		})
+		return
+	}
+
 	// Mark batch as posted
 	err = h.store.PostReimbursementBatch(r.Context(), pgBatchID)
 	if err != nil {

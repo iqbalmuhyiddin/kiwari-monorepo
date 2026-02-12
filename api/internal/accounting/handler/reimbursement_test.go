@@ -626,6 +626,25 @@ func TestBatchPost_Valid(t *testing.T) {
 	if tx.ReimbursementBatchID.String != "RMB001" {
 		t.Errorf("txn batch_id: got %v, want RMB001", tx.ReimbursementBatchID.String)
 	}
+
+	// Verify cash_account_id
+	expectedCashPg := pgtype.UUID{Bytes: cashAccountID, Valid: true}
+	if tx.CashAccountID != expectedCashPg {
+		t.Errorf("txn cash_account_id: got %v, want %v", tx.CashAccountID, expectedCashPg)
+	}
+
+	// Verify transactions array in response
+	txns, ok := resp["transactions"].([]interface{})
+	if !ok || len(txns) != 1 {
+		t.Fatalf("transactions: got %v, want array of length 1", resp["transactions"])
+	}
+	txn := txns[0].(map[string]interface{})
+	if txn["transaction_code"] == nil || txn["transaction_code"] == "" {
+		t.Error("transaction_code should be set")
+	}
+	if txn["amount"] != "500000.00" {
+		t.Errorf("transaction amount: got %v, want 500000.00", txn["amount"])
+	}
 }
 
 func TestBatchPost_AlreadyPosted(t *testing.T) {
@@ -760,5 +779,45 @@ func TestBatchPost_OnlyProcessesReady(t *testing.T) {
 	// Verify only 1 cash transaction created
 	if len(store.txns) != 1 {
 		t.Fatalf("txns count: got %d, want 1", len(store.txns))
+	}
+}
+
+func TestBatchPost_NoReadyItems(t *testing.T) {
+	store := newMockReimbursementStore()
+	router := setupReimbursementRouter(store)
+
+	draftID := uuid.New()
+	accountID := uuid.New()
+
+	var qtyPg, pricePg, amountPg pgtype.Numeric
+	qtyPg.Scan("5.0000")
+	pricePg.Scan("100000.00")
+	amountPg.Scan("500000.00")
+
+	store.requests[draftID] = database.AcctReimbursementRequest{
+		ID:          draftID,
+		BatchID:     pgtype.Text{String: "RMB001", Valid: true},
+		ExpenseDate: pgtype.Date{Time: time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC), Valid: true},
+		Description: "Draft request in batch",
+		Qty:         qtyPg,
+		UnitPrice:   pricePg,
+		Amount:      amountPg,
+		LineType:    "EXPENSE",
+		AccountID:   accountID,
+		Status:      "Draft",
+		Requester:   "John Doe",
+		CreatedAt:   time.Now(),
+	}
+
+	payload := map[string]interface{}{
+		"batch_id":        "RMB001",
+		"payment_date":    "2026-01-25",
+		"cash_account_id": uuid.New().String(),
+	}
+
+	rr := doRequest(t, router, "POST", "/accounting/reimbursements/batch/post", payload)
+
+	if rr.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status: got %d, want %d; body: %s", rr.Code, http.StatusUnprocessableEntity, rr.Body.String())
 	}
 }
