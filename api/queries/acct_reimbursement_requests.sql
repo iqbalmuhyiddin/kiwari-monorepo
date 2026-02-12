@@ -31,7 +31,7 @@ DELETE FROM acct_reimbursement_requests
 WHERE id = $1 AND status = 'Draft'
 RETURNING id;
 
--- name: AssignReimbursementBatch :exec
+-- name: AssignReimbursementBatch :execrows
 UPDATE acct_reimbursement_requests
 SET batch_id = $1, status = 'Ready'
 WHERE id = $2 AND status = 'Draft';

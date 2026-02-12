@@ -168,12 +168,16 @@ func numericToStringPtr(n pgtype.Numeric) *string {
 	if err != nil || val == nil {
 		return nil
 	}
-	d, err := decimal.NewFromString(val.(string))
+	s, ok := val.(string)
+	if !ok {
+		return nil
+	}
+	d, err := decimal.NewFromString(s)
 	if err != nil {
 		return nil
 	}
-	s := d.StringFixed(2)
-	return &s
+	result := d.StringFixed(2)
+	return &result
 }
 
 // --- Request / Response types for Cash Accounts ---

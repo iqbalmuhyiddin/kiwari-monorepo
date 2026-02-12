@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const assignReimbursementBatch = `-- name: AssignReimbursementBatch :exec
+const assignReimbursementBatch = `-- name: AssignReimbursementBatch :execrows
 UPDATE acct_reimbursement_requests
 SET batch_id = $1, status = 'Ready'
 WHERE id = $2 AND status = 'Draft'
@@ -23,9 +23,12 @@ type AssignReimbursementBatchParams struct {
 	ID      uuid.UUID   `json:"id"`
 }
 
-func (q *Queries) AssignReimbursementBatch(ctx context.Context, arg AssignReimbursementBatchParams) error {
-	_, err := q.db.Exec(ctx, assignReimbursementBatch, arg.BatchID, arg.ID)
-	return err
+func (q *Queries) AssignReimbursementBatch(ctx context.Context, arg AssignReimbursementBatchParams) (int64, error) {
+	result, err := q.db.Exec(ctx, assignReimbursementBatch, arg.BatchID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const checkBatchPosted = `-- name: CheckBatchPosted :one

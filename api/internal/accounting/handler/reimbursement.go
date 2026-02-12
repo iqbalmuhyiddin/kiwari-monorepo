@@ -27,7 +27,7 @@ type ReimbursementStore interface {
 	CreateAcctReimbursementRequest(ctx context.Context, arg database.CreateAcctReimbursementRequestParams) (database.AcctReimbursementRequest, error)
 	UpdateAcctReimbursementRequest(ctx context.Context, arg database.UpdateAcctReimbursementRequestParams) (database.AcctReimbursementRequest, error)
 	DeleteAcctReimbursementRequest(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
-	AssignReimbursementBatch(ctx context.Context, arg database.AssignReimbursementBatchParams) error
+	AssignReimbursementBatch(ctx context.Context, arg database.AssignReimbursementBatchParams) (int64, error)
 	ListReimbursementsByBatch(ctx context.Context, batchID pgtype.Text) ([]database.AcctReimbursementRequest, error)
 	PostReimbursementBatch(ctx context.Context, batchID pgtype.Text) error
 	CheckBatchPosted(ctx context.Context, batchID pgtype.Text) (bool, error)
@@ -177,19 +177,12 @@ func toReimbursementResponse(r database.AcctReimbursementRequest) reimbursementR
 }
 
 // numericToString converts pgtype.Numeric to string with 2 decimal places.
+// Delegates to numericToStringPtr (master.go) with a "0.00" default for nil.
 func numericToString(n pgtype.Numeric) string {
-	if !n.Valid {
-		return "0.00"
+	if s := numericToStringPtr(n); s != nil {
+		return *s
 	}
-	val, err := n.Value()
-	if err != nil || val == nil {
-		return "0.00"
-	}
-	d, err := decimal.NewFromString(val.(string))
-	if err != nil {
-		return "0.00"
-	}
-	return d.StringFixed(2)
+	return "0.00"
 }
 
 // --- Handlers ---
@@ -646,16 +639,17 @@ func (h *ReimbursementHandler) AssignBatch(w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		err = h.store.AssignReimbursementBatch(r.Context(), database.AssignReimbursementBatchParams{
+		rowsAffected, err := h.store.AssignReimbursementBatch(r.Context(), database.AssignReimbursementBatchParams{
 			BatchID: pgBatchID,
 			ID:      id,
 		})
 		if err != nil {
 			log.Printf("ERROR: assign reimbursement batch: %v", err)
-			// Continue assigning others (ignore if already assigned or not found)
 			continue
 		}
-		assigned++
+		if rowsAffected > 0 {
+			assigned++
+		}
 	}
 
 	writeJSON(w, http.StatusOK, assignBatchResponse{
@@ -746,6 +740,11 @@ func (h *ReimbursementHandler) PostBatch(w http.ResponseWriter, r *http.Request)
 	}
 	nextNum++ // Start from next number
 
+	// TODO: Wrap this loop + PostReimbursementBatch in a DB transaction for atomicity.
+	// Currently, if a CreateAcctCashTransaction fails mid-loop, earlier transactions
+	// are committed but the batch stays un-posted. A retry would create duplicates.
+	// Same pattern as purchase handler — acceptable for single-user accounting module.
+
 	// Create cash transactions for each Ready reimbursement
 	var transactions []transactionResponse
 	posted := 0
@@ -810,7 +809,7 @@ func (h *ReimbursementHandler) PostBatch(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, postBatchResponse{
+	writeJSON(w, http.StatusCreated, postBatchResponse{
 		BatchID:      req.BatchID,
 		Posted:       posted,
 		Transactions: transactions,

@@ -109,15 +109,15 @@ func (m *mockReimbursementStore) DeleteAcctReimbursementRequest(_ context.Contex
 	return id, nil
 }
 
-func (m *mockReimbursementStore) AssignReimbursementBatch(_ context.Context, arg database.AssignReimbursementBatchParams) error {
+func (m *mockReimbursementStore) AssignReimbursementBatch(_ context.Context, arg database.AssignReimbursementBatchParams) (int64, error) {
 	r, ok := m.requests[arg.ID]
 	if !ok || r.Status != "Draft" {
-		return pgx.ErrNoRows
+		return 0, nil // :execrows returns 0 rows affected, not an error
 	}
 	r.BatchID = arg.BatchID
 	r.Status = "Ready"
 	m.requests[r.ID] = r
-	return nil
+	return 1, nil
 }
 
 func (m *mockReimbursementStore) ListReimbursementsByBatch(_ context.Context, batchID pgtype.Text) ([]database.AcctReimbursementRequest, error) {
@@ -180,15 +180,6 @@ func (m *mockReimbursementStore) GetNextTransactionCode(_ context.Context) (stri
 }
 
 // --- Helpers ---
-
-func decodeJSON(t *testing.T, body []byte) map[string]interface{} {
-	t.Helper()
-	var result map[string]interface{}
-	if err := json.Unmarshal(body, &result); err != nil {
-		t.Fatalf("unmarshal response: %v", err)
-	}
-	return result
-}
 
 func setupReimbursementRouter(store handler.ReimbursementStore) *chi.Mux {
 	h := handler.NewReimbursementHandler(store)

@@ -238,6 +238,15 @@ func doRequest(t *testing.T, router http.Handler, method, path string, body inte
 	return rr
 }
 
+func decodeJSON(t *testing.T, body []byte) map[string]interface{} {
+	t.Helper()
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	return result
+}
+
 func setupAccountRouter(store handler.AcctAccountStore) *chi.Mux {
 	h := handler.NewMasterHandler(store, nil, nil)
 	r := chi.NewRouter()
