@@ -1,14 +1,17 @@
 package router
 
 import (
+	"context"
 	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	accthandler "github.com/kiwari-pos/api/internal/accounting/handler"
+	matcherpkg "github.com/kiwari-pos/api/internal/accounting/matcher"
 	"github.com/kiwari-pos/api/internal/config"
 	"github.com/kiwari-pos/api/internal/database"
 	"github.com/kiwari-pos/api/internal/handler"
@@ -80,6 +83,45 @@ func New(cfg *config.Config, queries *database.Queries, pool *pgxpool.Pool, hub 
 			// Purchases
 			purchaseHandler := accthandler.NewPurchaseHandler(queries)
 			r.Route("/accounting/purchases", purchaseHandler.RegisterRoutes)
+
+			// Reimbursements
+			reimbursementHandler := accthandler.NewReimbursementHandler(queries)
+
+			// WhatsApp matcher -- loaded once at startup; restart API after adding new items
+			allItems, err := queries.ListAcctItems(context.Background())
+			if err != nil {
+				log.Printf("WARNING: failed to load items for matcher: %v", err)
+				allItems = []database.AcctItem{}
+			}
+			matcherItems := make([]matcherpkg.Item, len(allItems))
+			for i, item := range allItems {
+				matcherItems[i] = matcherpkg.Item{
+					ID:       item.ID,
+					Code:     item.ItemCode,
+					Name:     item.ItemName,
+					Keywords: item.Keywords,
+					Unit:     item.Unit,
+				}
+			}
+			var defaultAccountID uuid.UUID
+			accts, err := queries.ListAcctAccounts(context.Background())
+			if err == nil {
+				for _, a := range accts {
+					if a.LineType == "EXPENSE" {
+						defaultAccountID = a.ID
+						break
+					}
+				}
+			}
+			if defaultAccountID == (uuid.UUID{}) {
+				log.Printf("WARNING: no default expense account found; WhatsApp reimbursements will use zero UUID")
+			}
+			whatsappHandler := accthandler.NewWhatsAppHandler(queries, matcherItems, defaultAccountID)
+
+			r.Route("/accounting/reimbursements", func(r chi.Router) {
+				reimbursementHandler.RegisterRoutes(r)
+				r.Post("/from-whatsapp", whatsappHandler.FromWhatsApp)
+			})
 		})
 
 		// Outlet-scoped routes
