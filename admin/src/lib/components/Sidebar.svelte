@@ -24,8 +24,11 @@
 	const keuanganItems: NavItem[] = [
 		{ label: 'Ringkasan', href: '/accounting', icon: '##', roles: ['OWNER'] },
 		{ label: 'Pembelian', href: '/accounting/purchases', icon: '##', roles: ['OWNER'] },
-		{ label: 'Laporan', href: '/accounting/reports', icon: '##', roles: ['OWNER'] },
+		{ label: 'Penjualan', href: '/accounting/sales', icon: '##', roles: ['OWNER'] },
 		{ label: 'Reimburse', href: '/accounting/reimbursements', icon: '##', roles: ['OWNER'] },
+		{ label: 'Gaji', href: '/accounting/payroll', icon: '##', roles: ['OWNER'] },
+		{ label: 'Jurnal', href: '/accounting/transactions', icon: '##', roles: ['OWNER'] },
+		{ label: 'Laporan', href: '/accounting/reports', icon: '##', roles: ['OWNER'] },
 		{ label: 'Master Data', href: '/accounting/master', icon: '##', roles: ['OWNER'] }
 	];
 

@@ -341,6 +341,47 @@ export interface AcctCashTransaction {
 	created_at: string;
 }
 
+export interface AcctSalesDailySummary {
+	id: string;
+	sales_date: string;
+	channel: string;
+	payment_method: string;
+	gross_sales: string;
+	discount_amount: string;
+	net_sales: string;
+	cash_account_id: string;
+	outlet_id: string | null;
+	source: string;         // 'pos' | 'manual'
+	posted_at: string | null;
+	created_at: string;
+}
+
+export interface AcctPayrollEntry {
+	id: string;
+	payroll_date: string;
+	period_type: string;     // 'Daily' | 'Weekly' | 'Monthly'
+	period_ref: string | null;
+	employee_name: string;
+	gross_pay: string;
+	payment_method: string;
+	cash_account_id: string;
+	outlet_id: string | null;
+	posted_at: string | null;
+	created_at: string;
+}
+
+export interface POSSyncRequest {
+	start_date: string;
+	end_date: string;
+	outlet_id: string;
+	payment_method_accounts: Record<string, string>;
+}
+
+export interface POSSyncResponse {
+	synced_count: number;
+	summaries: AcctSalesDailySummary[];
+}
+
 export interface AcctReimbursementRequest {
 	id: string;
 	batch_id: string | null;
