@@ -22,13 +22,15 @@
 	];
 
 	const keuanganItems: NavItem[] = [
+		{ label: 'Ringkasan', href: '/accounting', icon: '##', roles: ['OWNER'] },
 		{ label: 'Pembelian', href: '/accounting/purchases', icon: '##', roles: ['OWNER'] },
+		{ label: 'Laporan', href: '/accounting/reports', icon: '##', roles: ['OWNER'] },
 		{ label: 'Reimburse', href: '/accounting/reimbursements', icon: '##', roles: ['OWNER'] },
 		{ label: 'Master Data', href: '/accounting/master', icon: '##', roles: ['OWNER'] }
 	];
 
 	function isActive(href: string): boolean {
-		if (href === '/') return page.url.pathname === '/';
+		if (href === '/' || href === '/accounting') return page.url.pathname === href;
 		return page.url.pathname.startsWith(href);
 	}
 

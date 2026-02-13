@@ -122,6 +122,14 @@ func New(cfg *config.Config, queries *database.Queries, pool *pgxpool.Pool, hub 
 				reimbursementHandler.RegisterRoutes(r)
 				r.Post("/from-whatsapp", whatsappHandler.FromWhatsApp)
 			})
+
+			// Reports
+			reportHandler := accthandler.NewReportHandler(queries)
+			r.Route("/accounting/reports", reportHandler.RegisterRoutes)
+
+			// Dashboard
+			dashboardHandler := accthandler.NewDashboardHandler(queries)
+			r.Route("/accounting/dashboard", dashboardHandler.RegisterRoutes)
 		})
 
 		// Outlet-scoped routes

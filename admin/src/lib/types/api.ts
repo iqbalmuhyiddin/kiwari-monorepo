@@ -377,3 +377,84 @@ export interface WhatsAppReimbursementResponse {
 	items_ambiguous: number;
 	items_unmatched: number;
 }
+
+// --- Accounting Report Types ---
+
+export interface PnlPeriod {
+	period: string;
+	net_sales: string;
+	cogs: string;
+	gross_profit: string;
+	expenses: PnlExpenseRow[];
+	total_expenses: string;
+	net_profit: string;
+	gross_margin_pct: string;
+	net_margin_pct: string;
+}
+
+export interface PnlExpenseRow {
+	account_code: string;
+	account_name: string;
+	amount: string;
+}
+
+export interface PnlResponse {
+	periods: PnlPeriod[];
+}
+
+export interface CashFlowAccount {
+	cash_account_code: string;
+	cash_account_name: string;
+	cash_in: string;
+	cash_out: string;
+	net: string;
+}
+
+export interface CashFlowPeriod {
+	period: string;
+	accounts: CashFlowAccount[];
+	total_cash_in: string;
+	total_cash_out: string;
+	total_net: string;
+}
+
+export interface CashFlowResponse {
+	periods: CashFlowPeriod[];
+}
+
+export interface CashBalance {
+	cash_account_code: string;
+	cash_account_name: string;
+	balance: string;
+}
+
+export interface MonthlyPnlSummary {
+	period: string;
+	net_sales: string;
+	cogs: string;
+	gross_profit: string;
+	total_expenses: string;
+	net_profit: string;
+}
+
+export interface PendingReimbursements {
+	count: number;
+	total_amount: string;
+}
+
+export interface RecentTransaction {
+	id: string;
+	transaction_code: string;
+	transaction_date: string;
+	description: string;
+	amount: string;
+	line_type: string;
+	created_at: string;
+}
+
+export interface DashboardResponse {
+	cash_balances: CashBalance[];
+	monthly_pnl: MonthlyPnlSummary;
+	pending_reimbursements: PendingReimbursements;
+	recent_transactions: RecentTransaction[];
+}
