@@ -131,7 +131,8 @@ WHERE
     ($5::text IS NULL OR line_type = $5) AND
     ($6::uuid IS NULL OR account_id = $6) AND
     ($7::uuid IS NULL OR cash_account_id = $7) AND
-    ($8::uuid IS NULL OR outlet_id = $8)
+    ($8::uuid IS NULL OR outlet_id = $8) AND
+    ($9::text IS NULL OR description ILIKE '%' || $9 || '%')
 ORDER BY transaction_date DESC, created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -145,6 +146,7 @@ type ListAcctCashTransactionsParams struct {
 	AccountID     pgtype.UUID `json:"account_id"`
 	CashAccountID pgtype.UUID `json:"cash_account_id"`
 	OutletID      pgtype.UUID `json:"outlet_id"`
+	Search        pgtype.Text `json:"search"`
 }
 
 func (q *Queries) ListAcctCashTransactions(ctx context.Context, arg ListAcctCashTransactionsParams) ([]AcctCashTransaction, error) {
@@ -157,6 +159,7 @@ func (q *Queries) ListAcctCashTransactions(ctx context.Context, arg ListAcctCash
 		arg.AccountID,
 		arg.CashAccountID,
 		arg.OutletID,
+		arg.Search,
 	)
 	if err != nil {
 		return nil, err

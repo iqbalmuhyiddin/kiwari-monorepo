@@ -96,17 +96,18 @@ type AcctReimbursementRequest struct {
 }
 
 type AcctSalesDailySummary struct {
-	ID             uuid.UUID      `json:"id"`
-	SalesDate      pgtype.Date    `json:"sales_date"`
-	Channel        string         `json:"channel"`
-	PaymentMethod  string         `json:"payment_method"`
-	GrossSales     pgtype.Numeric `json:"gross_sales"`
-	DiscountAmount pgtype.Numeric `json:"discount_amount"`
-	NetSales       pgtype.Numeric `json:"net_sales"`
-	CashAccountID  uuid.UUID      `json:"cash_account_id"`
-	OutletID       pgtype.UUID    `json:"outlet_id"`
-	Source         string         `json:"source"`
-	CreatedAt      time.Time      `json:"created_at"`
+	ID             uuid.UUID          `json:"id"`
+	SalesDate      pgtype.Date        `json:"sales_date"`
+	Channel        string             `json:"channel"`
+	PaymentMethod  string             `json:"payment_method"`
+	GrossSales     pgtype.Numeric     `json:"gross_sales"`
+	DiscountAmount pgtype.Numeric     `json:"discount_amount"`
+	NetSales       pgtype.Numeric     `json:"net_sales"`
+	CashAccountID  uuid.UUID          `json:"cash_account_id"`
+	OutletID       pgtype.UUID        `json:"outlet_id"`
+	Source         string             `json:"source"`
+	CreatedAt      time.Time          `json:"created_at"`
+	PostedAt       pgtype.Timestamptz `json:"posted_at"`
 }
 
 type Category struct {

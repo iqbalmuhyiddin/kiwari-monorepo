@@ -6,7 +6,8 @@ WHERE
     (sqlc.narg('line_type')::text IS NULL OR line_type = sqlc.narg('line_type')) AND
     (sqlc.narg('account_id')::uuid IS NULL OR account_id = sqlc.narg('account_id')) AND
     (sqlc.narg('cash_account_id')::uuid IS NULL OR cash_account_id = sqlc.narg('cash_account_id')) AND
-    (sqlc.narg('outlet_id')::uuid IS NULL OR outlet_id = sqlc.narg('outlet_id'))
+    (sqlc.narg('outlet_id')::uuid IS NULL OR outlet_id = sqlc.narg('outlet_id')) AND
+    (sqlc.narg('search')::text IS NULL OR description ILIKE '%' || sqlc.narg('search') || '%')
 ORDER BY transaction_date DESC, created_at DESC
 LIMIT $1 OFFSET $2;
 
