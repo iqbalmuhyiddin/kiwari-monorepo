@@ -1,6 +1,7 @@
 # ── Go ────────────────────────────
 api/tmp/
 api/*.exe
+api/server
 
 # ── Node / SvelteKit ─────────────
 admin/node_modules/
@@ -51,3 +52,5 @@ deploy/postgres/init/*.env
 api/seed-tool
 
 SECRET.md
+
+.tmp

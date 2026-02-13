@@ -65,7 +65,7 @@ The theme here is **boring tech, done well**. Every choice is something with a d
 
 ---
 
-## The Database: 14 Tables, No Surprises
+## The Database: 21 Tables, No Surprises
 
 The schema is designed around one principle: **data integrity is sacred**.
 
@@ -82,6 +82,8 @@ All monetary values are `decimal(12,2)` — never floats. In Go, this is `shopsp
 **Menu structure**: `categories` → `products` → `variant_groups/variants` (pick one, like size) + `modifier_groups/modifiers` (pick many, like extra toppings) + `combo_items` (bundled products)
 
 **Orders**: `orders` → `order_items` → `order_item_modifiers` → `payments`
+
+**Accounting** (added Phase 1-2): `acct_accounts` (chart of accounts), `acct_items` (inventory items for matching), `acct_cash_accounts` (kas/bank accounts), `acct_cash_transactions` (the ledger — every purchase, reimbursement, or sales entry), `acct_reimbursement_requests` (expense claims from staff), `acct_sales_daily_summaries` (daily sales aggregation), `acct_payroll_entries` (salary records)
 
 ### Price snapshots — the most important design decision
 
@@ -111,14 +113,19 @@ Every handler owns a **narrow interface** for database access. For example, `Aut
 
 ```
 api/internal/
-├── auth/        JWT token generation & validation
-├── config/      Env var loading
-├── database/    sqlc-generated code (DON'T EDIT BY HAND)
-├── handler/     HTTP handlers (one file per domain)
-├── middleware/   Auth guard, role checks, outlet scoping
-├── router/      Chi router wiring
-├── service/     Business logic (order creation, etc.)
-└── ws/          WebSocket hub for live updates
+├── accounting/
+│   ├── handler/     Accounting HTTP handlers (master data, purchases, reimbursements, reports, dashboard)
+│   ├── matcher/     Item matching engine (keyword-based, variant filtering)
+│   └── parser/      WhatsApp message parser (Indonesian dates, price shortcuts)
+├── auth/            JWT token generation & validation
+├── config/          Env var loading
+├── database/        sqlc-generated code (DON'T EDIT BY HAND)
+├── enum/            String constants replacing old PG enums
+├── handler/         POS HTTP handlers (one file per domain)
+├── middleware/       Auth guard, role checks, outlet scoping
+├── router/          Chi router wiring
+├── service/         Business logic (order creation, etc.)
+└── ws/              WebSocket hub for live updates
 ```
 
 ### SQL queries
@@ -132,7 +139,7 @@ All SQL lives in `api/queries/*.sql`. Run `make api-sqlc` and it generates type-
 The API runs a WebSocket hub per outlet at `/ws/outlets/{oid}/orders`. When an order is created, updated, or paid, all connected clients for that outlet get a broadcast. This powers the live orders panel on the admin dashboard and will power the kitchen display.
 
 ### Tests
-401 unit tests + 1 integration test that exercises the full lifecycle: login → create order → add items → multi-payment → auto-complete. Every handler file has a corresponding `_test.go` using `httptest`.
+~469 unit tests + 1 integration test that exercises the full lifecycle: login → create order → add items → multi-payment → auto-complete. Every handler file has a corresponding `_test.go` using `httptest`. The accounting module adds its own handler, matcher, and parser tests.
 
 ---
 
@@ -199,6 +206,65 @@ Every color, spacing value, and border radius is defined as a CSS custom propert
 - **Font**: DM Sans (loaded from Google Fonts)
 - **Shapes**: 8px chips, 10px buttons, 12px cards, 16px sheets
 - **Light-only** — no dark theme (POS environments are brightly lit)
+
+---
+
+## The Accounting Module: Your Financial Backbone
+
+Added in three phases after the core POS was deployed. This is the part where the POS stops being "just a cash register" and starts being a real business management tool.
+
+### What it does
+
+Think of the POS as two halves: the **front of house** (taking orders, printing receipts) and the **back of house** (where did the money go?). The accounting module is the back-of-house half.
+
+```
+POS Orders ──→ Sales transactions
+WhatsApp ──→ Reimbursement requests
+Admin UI ──→ Purchase entries
+           ↓
+   acct_cash_transactions (the ledger)
+           ↓
+   P&L Reports / Cash Flow / Dashboard
+```
+
+### Phase 1: Master Data & Purchases (done)
+
+The foundation. 7 new `acct_*` tables, CRUD for accounts (chart of accounts), items (inventory for matching), and cash accounts (kas/bank). Purchase entry with auto-sequencing codes (`PCS000001`, `PCS000002`...) and multi-line items.
+
+The **item matching engine** is particularly clever — it takes free-text descriptions (like "cabe merah 5kg") and fuzzy-matches them against your inventory items using keyword scoring. Variant keywords (merah, hijau, tanjung) get 5x weight and trigger hard filtering so "cabe merah" doesn't accidentally match "cabe hijau".
+
+### Phase 2: Reimbursements & WhatsApp (done)
+
+This is the workflow that replaced the "send receipt photo to WhatsApp group" chaos. Staff send a structured WhatsApp message listing what they bought, and the system:
+
+1. **Parses Indonesian text** — dates like "12 Feb" or "12 Februari", prices like "15rb" (15,000) or "1.5jt" (1,500,000), quantities like "5kg" or "3 bungkus"
+2. **Matches items** to your inventory using the matching engine
+3. **Creates draft reimbursement requests** automatically
+4. **Returns a reply** showing what matched (Cocok), what was ambiguous (Ambigu), and what couldn't be found (Tidak cocok)
+
+Then in the admin UI, you review the drafts, batch them together, and post them — which creates the actual cash transactions in the ledger.
+
+The batch workflow: Draft → Ready → Posted. "Buat Batch" assigns selected items to a batch code (BTH000001). "Post Batch" creates the cash transactions and marks them as done. Simple, auditable, reversible-before-posting.
+
+### Phase 3: Reports & Dashboard (in progress)
+
+Financial reporting endpoints:
+
+- **P&L (Laba Rugi)**: Groups `acct_cash_transactions` by month. Computes Net Sales, COGS, Gross Profit, itemized Expenses, Net Profit, and margin percentages. The handler takes flat DB rows grouped by (period, line_type, account) and pivots them into a structured response.
+- **Cash Flow (Arus Kas)**: Cash in (SALES + CAPITAL) vs cash out (INVENTORY + EXPENSE + COGS + DRAWING) per cash account per month.
+- **Dashboard (Ringkasan)**: Cash balances per account, current month P&L summary, pending reimbursement count, recent 10 transactions.
+
+Admin pages: Laporan (two-tab P&L + Cash Flow with CSV export) and Ringkasan (dashboard with KPI cards and transaction table).
+
+### Accounting architecture decisions
+
+| Decision | Why |
+|----------|-----|
+| Separate `acct_*` tables (not extending POS tables) | Clean domain boundary. Accounting is its own world with its own rules. |
+| Single `acct_cash_transactions` ledger | One table for all financial entries — purchases, reimbursements, sales. Simplifies reporting queries. |
+| Sequential transaction codes (`PCS000001`, `BTH000001`) | Human-readable, grep-friendly, sortable. Generated via `COALESCE(MAX(code), 'XXX000000')` + increment. |
+| WhatsApp parser as separate package | Testable in isolation (28 test cases). No HTTP dependencies. |
+| Batch posting (not immediate posting) | Owner reviews before anything hits the ledger. Mistake recovery is easy — just don't post. |
 
 ---
 
@@ -282,8 +348,14 @@ Each worktree is a fully independent checkout. You can have the API running from
 | 8 | Android POS app | Done | 8 screens + theme redesign. 100 files, 10,384 lines. |
 | 9 | SvelteKit admin panel | Done | 8 tasks: scaffold, auth, dashboard, menu, orders, CRM, reports, settings. ~35 files. |
 | 10 | Deployment & seed script | Done | CI/CD pipeline, VPS deploy, seed script. v1.0.0 deployed. |
+| — | Android Order Flow | Done | Cart edit mode, payment for existing orders, bill/receipt/share. 10 tasks. |
+| — | Remove PG Enums | Done | VARCHAR(20) + CHECK constraints replace 9 enum types. Cleaner migrations. |
+| — | Android Admin Features | Done | Reports, CRM, menu admin, staff management, drawer navigation. 11 tasks. |
+| — | Accounting Phase 1 | Done | 7 tables, master data CRUD, item matching engine, purchase entry. 12 tasks. |
+| — | Accounting Phase 2 | Done | Reimbursement CRUD, WhatsApp parser, batch workflow, admin page. 10 tasks. |
+| — | Accounting Phase 3 | **In Progress** | P&L + Cash Flow report handlers done. Dashboard + admin pages pending. |
 
-**All milestones complete.** The full POS system is built and deployed.
+**Core POS complete and deployed.** Accounting module in active development (Phase 3: reports + dashboard).
 
 ---
 
@@ -322,6 +394,24 @@ The Go API and PostgreSQL schema use `MANAGER` as the role enum value, but the S
 ### Go query params: one value per key
 `r.URL.Query().Get("key")` returns only the first value. `?status=NEW&status=PREPARING` won't give you both — only `NEW`. To filter by multiple statuses, make separate API calls and merge results client-side.
 
+### sqlc COALESCE+aggregate needs explicit cast
+`COALESCE(MAX(code), 'PCS000000')` generates `interface{}` in sqlc because the type inference can't determine the output type of a COALESCE wrapping an aggregate. The fix: `COALESCE(MAX(code), 'PCS000000')::text AS next_code`. Always add `::text AS alias` on COALESCE+aggregate expressions. This cost hours to debug the first time.
+
+### pgtype.Numeric → string: the non-obvious conversion
+`pgtype.Numeric.Int.String()` gives the raw `big.Int` representation — e.g., "1500050" for the decimal value 15000.50. The `Exp` field (-2) tells you where the decimal point goes, but `Int.String()` ignores it entirely. The correct pattern: `n.Value()` → parse with `shopspring/decimal.NewFromString()` → `.StringFixed(2)`. This is wrapped in `numericToStringPtr()` in the accounting handler.
+
+### PostgreSQL DEFAULT values block DROP TYPE
+When migrating away from PG enums to VARCHAR, you can't just `DROP TYPE my_enum` — if any column has a DEFAULT using that type, the DROP fails. You must `ALTER COLUMN ... DROP DEFAULT` first, then drop the type, then re-add the default with a string literal. The down migration has the same issue in reverse. Easy to miss, especially with 9 enum types across 14 tables.
+
+### WhatsApp parser: Indonesian date edge cases
+Parsing "12 Des" in January means December of last year, not this year. A naive parser assigns the current year, producing a future date that makes no sense. Fix: if the parsed date is more than 30 days in the future, subtract a year. Also: Indonesian has duplicate month abbreviations that look like typos — "Okt" vs "Oktober", "Agt" vs "Agustus". Support both short and long forms.
+
+### shopspring/decimal panics on Div(0)
+Unlike Go's built-in float division (which returns Inf or NaN), `decimal.Div(decimal.Zero)` panics. This bit us in the WhatsApp handler when a parsed quantity was zero. Always guard: `if qty.IsZero() { continue }` before any division.
+
+### Batch reimbursement: `:exec` vs `:execrows` in sqlc
+An `UPDATE ... WHERE id = ANY($1)` with sqlc's `:exec` returns `nil` error even when zero rows were affected. The handler counted "5 assigned" when really 0 matched. Switch to `:execrows` to get `RowsAffected()` and verify the count. Small sqlc annotation change, big correctness difference.
+
 ---
 
 ## Quick Reference
@@ -339,7 +429,7 @@ Outlet:    17fbe5e3-6dea-4a8e-9036-8a59c345e157
 make db-up && make db-migrate && make db-seed   # Bootstrap local DB
 make api-run                                     # Start API on :8081
 make admin-dev                                   # Start admin on :5173
-make api-test                                    # Run all 401 tests
+make api-test                                    # Run all ~469 tests
 make docker-up                                   # Full production stack
 ```
 
@@ -351,9 +441,13 @@ Admin:  https://pos.nasibakarkiwari.com
 
 ### Reference docs
 ```
-docs/plans/2026-02-06-pos-system-design.md     # Full system design
-docs/plans/2026-02-06-backend-plan.md          # Backend milestones
-docs/plans/2026-02-06-android-pos-plan.md      # Android milestones
-docs/plans/2026-02-06-sveltekit-admin-plan.md  # Admin milestones
-PROGRESS.md                                     # Implementation tracker
+docs/plans/2026-02-06-pos-system-design.md          # Full system design
+docs/plans/2026-02-06-backend-plan.md               # Backend milestones
+docs/plans/2026-02-06-android-pos-plan.md           # Android milestones
+docs/plans/2026-02-06-sveltekit-admin-plan.md       # Admin milestones
+docs/plans/2026-02-11-accounting-module-design.md   # Accounting system design
+docs/plans/2026-02-11-accounting-phase1-plan.md     # Accounting Phase 1
+docs/plans/2026-02-12-accounting-phase2-plan.md     # Accounting Phase 2
+docs/plans/2026-02-12-accounting-phase3-plan.md     # Accounting Phase 3 (active)
+PROGRESS.md                                          # Implementation tracker
 ```

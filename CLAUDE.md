@@ -66,7 +66,7 @@ CI/CD: GitHub Actions → ghcr.io → SSH deploy. Push main → staging, tag v* 
 
 ## Environment
 
-- Go: `/opt/homebrew/bin/go`. sqlc/migrate: `~/go/bin/` (needs PATH export). Go commands from `api/`.
+- Go: `/opt/homebrew/bin/go`. sqlc/migrate: `~/go/bin/` (in PATH via `.zshrc`). Go commands from `api/`.
 - Android: CLI-only (no Studio). JDK 17 Homebrew. `cd android && ./gradlew installDebug` via USB. Debug URL = Mac LAN IP, `usesCleartextTraffic=true`.
 - **No API version prefix**: routes are `/auth/login`, `/outlets/{oid}/...` — base URL = `http://host:port/`
 - **Test creds**: `admin@kiwari.com` / `password123` / PIN `1234` / outlet `17fbe5e3-6dea-4a8e-9036-8a59c345e157`
