@@ -130,6 +130,18 @@ func New(cfg *config.Config, queries *database.Queries, pool *pgxpool.Pool, hub 
 			// Dashboard
 			dashboardHandler := accthandler.NewDashboardHandler(queries)
 			r.Route("/accounting/dashboard", dashboardHandler.RegisterRoutes)
+
+			// Sales
+			salesHandler := accthandler.NewSalesHandler(queries)
+			r.Route("/accounting/sales", salesHandler.RegisterRoutes)
+
+			// Payroll
+			payrollHandler := accthandler.NewPayrollHandler(queries)
+			r.Route("/accounting/payroll", payrollHandler.RegisterRoutes)
+
+			// Transactions (full ledger)
+			transactionHandler := accthandler.NewTransactionHandler(queries)
+			r.Route("/accounting/transactions", transactionHandler.RegisterRoutes)
 		})
 
 		// Outlet-scoped routes
